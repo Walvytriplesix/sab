@@ -1,7 +1,7 @@
 -- 🌪 WindUI + Player Utilities (Speed Hack, Infinity Jump, God Mode)
 
 -- Memuat library WindUI
-local WindUI = loadstring(game:HttpGet("https://github.com/Walvytriplesix/sab/blob/main/mainscript"))()
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
