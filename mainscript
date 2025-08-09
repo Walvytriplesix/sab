@@ -1,7 +1,7 @@
 -- 🌪 WindUI + Player Utilities (Speed Hack, Infinity Jump, God Mode)
 
 -- Memuat library WindUI
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+local WindUI = loadstring(game:HttpGet("https://github.com/Walvytriplesix/sab/blob/main/mainscript"))()
 local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
@@ -11,9 +11,6 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local PathfindingService = game:GetService("PathfindingService")
 local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
 
 -- Folder Config (use one consistent folder)
 local CONFIG_FOLDER = "WalvyCommunityConfig"
@@ -37,7 +34,6 @@ local Window = WindUI:CreateWindow({
 
 -- Define toggle mapping for easier state management
 local toggleMap = {
-    ["Speed Hack Safe"] = { var = "speedOn", value = false, toggle = nil, callback = nil }
     ["Speed Hack"] = { var = "speedOn", toggle = nil, callback = nil },
     ["Infinity Jump"] = { var = "infinityJumpEnabled", toggle = nil, callback = nil },
     ["God Mode"] = { var = "godOn", toggle = nil, callback = nil },
@@ -92,71 +88,13 @@ local PlayerTab = MainSection:Tab({
     Icon = "user"
 })
 
-local character, humanoid, hrp
-local speedOn = false
-local BASE_SPEED = 40
-local MOVE_THRESHOLD = 0.1
-local DEFAULT_SPEED = 16
-
-local function updateCharacter()
-    character = player.Character or player.CharacterAdded:Wait()
-    humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    hrp = character and character:FindFirstChild("HumanoidRootPart")
-    
-    if humanoid then
-        humanoid.WalkSpeed = speedOn and BASE_SPEED or DEFAULT_SPEED
-    end
-end
-
-updateCharacter()
-player.CharacterAdded:Connect(updateCharacter)
-
-RunService.Heartbeat:Connect(function()
-    if not speedOn or not character or not humanoid or not hrp then return end
-
-    local isJumping = humanoid:GetState() == Enum.HumanoidStateType.Jumping or
-                     humanoid:GetState() == Enum.HumanoidStateType.Freefall or
-                     humanoid.Jump
-
-    local moveVec = Vector3.new(hrp.AssemblyLinearVelocity.X, 0, hrp.AssemblyLinearVelocity.Z)
-    local speed = moveVec.Magnitude
-
-    if speed > MOVE_THRESHOLD and humanoid.MoveDirection.Magnitude > 0 and not isJumping then
-        local dir = humanoid.MoveDirection.Unit
-        hrp.AssemblyLinearVelocity = Vector3.new(dir.X * BASE_SPEED, hrp.AssemblyLinearVelocity.Y, dir.Z * BASE_SPEED)
-    elseif not isJumping then
-        hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
-    end
-end)
-
--- Toggle di WindUI
-toggleMap["Speed Hack Safe"].toggle = PlayerTab:Toggle({
-    Title = "Speed Hack Safe",
-    Desc = "Membuat karakter berlari cepat dengan aman",
-    Value = false,
-    Callback = function(state)
-        speedOn = state
-        toggleMap["Speed Hack Safe"].value = state
-        
-        if humanoid then
-            humanoid.WalkSpeed = state and BASE_SPEED or DEFAULT_SPEED
-        end
-        
-        if hrp then
-            hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
-        end
-        
-        WindUI:Notify({
-            Title = "Speed Hack Safe",
-            Content = state and "Enabled" or "Disabled",
-            Icon = "rbxassetid://85151307796718",
-            Duration = 5
-        })
-    end
-})
-
 -- 🔘 Toggle Speed Hack
+local BASE_SPEED = 55
+local MOVE_THRESHOLD = 0.1
+
 local speedOn = false
+local connections = {}
+local character, humanoid, hrp
 
 local function buyAndEquipItem(itemID)
     local success, err = pcall(function()
@@ -171,9 +109,9 @@ local function buyAndEquipItem(itemID)
             local backpack = LocalPlayer:WaitForChild("Backpack")
             local tool = backpack:FindFirstChild(itemID)
             if tool then
-                local character = LocalPlayer.Character
-                if character then
-                    tool.Parent = character
+                local char = LocalPlayer.Character
+                if char then
+                    tool.Parent = char
                     task.wait(0.25)
                     tool.Parent = backpack
                 end
@@ -186,17 +124,51 @@ local function buyAndEquipItem(itemID)
     end
 end
 
+local function updateCharacter()
+    character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    humanoid = character:WaitForChild("Humanoid")
+    hrp = character:WaitForChild("HumanoidRootPart")
+    humanoid.WalkSpeed = BASE_SPEED
+end
+
+updateCharacter()
+LocalPlayer.CharacterAdded:Connect(updateCharacter)
+
+-- Fungsi utama speed hack dengan AssemblyLinearVelocity
 local function applySpeed()
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid", 5)
+    if connections.heartbeat then connections.heartbeat:Disconnect() end
+    connections.heartbeat = RunService.Heartbeat:Connect(function()
+        if not humanoid or not hrp then return end
+
+        local state = humanoid:GetState()
+        local isJumping = (state == Enum.HumanoidStateType.Jumping or
+                          state == Enum.HumanoidStateType.Freefall or
+                          humanoid.Jump)
+
+        local moveVec = Vector3.new(hrp.AssemblyLinearVelocity.X, 0, hrp.AssemblyLinearVelocity.Z)
+        local speed = moveVec.Magnitude
+
+        if speed > MOVE_THRESHOLD and humanoid.MoveDirection.Magnitude > 0 and not isJumping then
+            local dir = humanoid.MoveDirection.Unit
+            hrp.AssemblyLinearVelocity = Vector3.new(dir.X * BASE_SPEED, hrp.AssemblyLinearVelocity.Y, dir.Z * BASE_SPEED)
+        elseif not isJumping then
+            hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
+        end
+
+        humanoid.WalkSpeed = BASE_SPEED
+    end)
+end
+
+local function stopSpeed()
+    if connections.heartbeat then
+        connections.heartbeat:Disconnect()
+        connections.heartbeat = nil
+    end
     if humanoid then
-        humanoid.WalkSpeed = 70
-        if connections.speed then connections.speed:Disconnect() end
-        connections.speed = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-            if humanoid.WalkSpeed ~= 70 then
-                humanoid.WalkSpeed = 70
-            end
-        end)
+        humanoid.WalkSpeed = 16 -- reset ke default
+    end
+    if hrp then
+        hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
     end
 end
 
@@ -204,7 +176,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     task.spawn(function()
         task.wait(1)
         if speedOn then applySpeed() end
-        if godOn then applyGodMode() end
+        -- kamu bisa tambah if godOn then applyGodMode() end jika perlu
     end)
 end)
 
@@ -214,7 +186,7 @@ toggleMap["Speed Hack"].toggle = PlayerTab:Toggle({
     Value = false,
     Callback = function(state)
         speedOn = state
-        toggleMap["Speed Hack"].value = state -- Store state
+        toggleMap["Speed Hack"].value = state -- Simpan state
         if state then
             applySpeed()
             buyAndEquipItem("Speed Coil")
@@ -224,12 +196,7 @@ toggleMap["Speed Hack"].toggle = PlayerTab:Toggle({
                 Icon = "rbxassetid://85151307796718"
             })
         else
-            if connections.speed then connections.speed:Disconnect() end
-            local char = LocalPlayer.Character
-            if char then
-                local hum = char:FindFirstChildWhichIsA("Humanoid")
-                if hum then hum.WalkSpeed = 16 end
-            end
+            stopSpeed()
             WindUI:Notify({
                 Title = "Speed Hack",
                 Content = "Disabled",
