@@ -89,9 +89,9 @@ local PlayerTab = MainSection:Tab({
 
 local speedOnV1 = false
 local speedOnV2 = false
-local BASE_SPEED_V1 = 70
-local BASE_SPEED_V3 = 80
-local DEFAULT_SPEED = 16
+local BASE_SPEED_V1 = 60
+local BASE_SPEED_V3 = 68
+local DEFAULT_SPEED = 50
 local MOVE_THRESHOLD = 0.1
 local character, humanoid, hrp
 local speedConnection
