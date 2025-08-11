@@ -1,0 +1,128 @@
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local hopDelay = 10 -- detik diam di server sebelum hop lagi
+local placeId = game.PlaceId
+
+-- Brainrot ESP function dari scriptmu (versi simple dan dipersingkat)
+local brainrotGodPrices = {
+    ["Cocofanto Elefanto"] = 10000, ["Girafa Celestre"] = 20000, -- dst
+}
+local brainrotSecretPrices = {
+    ["La Vacca Saturno Saturnita"] = 250000, -- dst
+}
+local mutationMultipliers = {
+    ["Gold"] = 1.25, ["Diamond"] = 1.5, ["Rainbow"] = 10, -- dst
+}
+
+local function getBrainrotType(name)
+    if brainrotGodPrices[name] then return "god" end
+    if brainrotSecretPrices[name] then return "secret" end
+    return nil
+end
+
+local function getColorByType(brainrotType)
+    if brainrotType == "god" then return Color3.fromRGB(0, 255, 0) end
+    if brainrotType == "secret" then return Color3.fromRGB(255, 0, 0) end
+    return Color3.fromRGB(255, 255, 255)
+end
+
+local function createESP(model)
+    if not model:IsA("Model") or model:FindFirstChild("ESP") then return end
+    local head = model:FindFirstChildWhichIsA("BasePart")
+    if not head then return end
+    local name = model.Name
+    local btype = getBrainrotType(name)
+    if not btype then return end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP"
+    highlight.Adornee = model
+    highlight.FillColor = getColorByType(btype)
+    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.FillTransparency = 0.4
+    highlight.OutlineTransparency = 0
+    highlight.Parent = model
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 160, 0, 50)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = model
+
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.TextColor3 = getColorByType(btype)
+    text.TextStrokeTransparency = 0
+    text.TextScaled = true
+    text.Text = name
+    text.Parent = billboard
+end
+
+local function scanAllBrainrots()
+    for _, obj in pairs(workspace:GetChildren()) do
+        createESP(obj)
+    end
+end
+
+workspace.ChildAdded:Connect(function(child)
+    task.wait(0.2)
+    createESP(child)
+end)
+
+-- Jalankan ESP langsung saat load
+scanAllBrainrots()
+
+-- Fungsi auto hop server
+local function hopServer()
+    print("Menunggu "..hopDelay.." detik sebelum hop server...")
+    task.wait(hopDelay)
+    -- Request server baru yang berbeda dengan JobId sekarang
+    local servers = {}
+    local lastJobId = game.JobId
+
+    -- Karena Roblox tidak menyediakan API official langsung untuk dapatkan server list,
+    -- kita harus menggunakan web request ke endpoint public Roblox.
+    -- Tapi beberapa executor tidak support web request. Kalau kamu punya executor yang support,
+    -- kamu bisa pakai contoh di bawah ini.
+
+    local success, response = pcall(function()
+        local url = "https://games.roblox.com/v1/games/"..placeId.."/servers/Public?sortOrder=Asc&limit=100"
+        local req = (syn and syn.request) or http_request or request
+        local res = req({
+            Url = url,
+            Method = "GET"
+        })
+        return res.Body
+    end)
+
+    if success and response then
+        local data = HttpService:JSONDecode(response)
+        if data and data.data then
+            for _, server in ipairs(data.data) do
+                if server.playing < server.maxPlayers and server.id ~= lastJobId then
+                    table.insert(servers, server.id)
+                end
+            end
+        end
+    end
+
+    if #servers == 0 then
+        print("Tidak ada server baru yang tersedia. Hop dibatalkan.")
+        return
+    end
+
+    local newServerId = servers[math.random(1, #servers)]
+    print("Teleport ke server baru:", newServerId)
+    TeleportService:TeleportToPlaceInstance(placeId, newServerId, Players.LocalPlayer)
+end
+
+-- Loop auto hop terus menerus
+while true do
+    hopServer()
+    -- Setelah teleport, script ini akan stop, karena pindah server
+    -- tapi kalau di server baru, script akan jalan lagi dari awal (restart)
+end
