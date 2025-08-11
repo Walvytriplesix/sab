@@ -40,6 +40,7 @@ local toggleMap = {
     ["Brainrot ESP"] = { var = "brainrotESPEnabled", value = false, toggle = nil, callback = nil },
     ["Player ESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
     ["ESP Lock Timer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
+    ["Reminder Lock"] = { var = "Reminder Lock", value = false, toggle = nil, callback = nil },
     ["Tween To Base"] = { var = "tweenToBaseEnabled", value = false, toggle = nil, callback = nil }
 }
 
@@ -818,6 +819,151 @@ toggleMap["ESP Lock Timer"].toggle = VisualTab:Toggle({
     end
 })
 toggleMap["ESP Lock Timer"].callback = toggleMap["ESP Lock Timer"].toggle.Callback
+
+--------------------------------------------------------------------
+-- Variabel
+--------------------------------------------------------------------
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local player = Players.LocalPlayer
+
+local lockReminderEnabled = false
+local screenGui, label, alarm
+
+--------------------------------------------------------------------
+-- Fungsi buat GUI
+--------------------------------------------------------------------
+local function createGUI()
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BaseStatusGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = CoreGui
+
+    label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 230, 0, 30)
+    label.Position = UDim2.new(1, -240, 1, -40)
+    label.BackgroundTransparency = 0.3
+    label.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 18
+    label.TextStrokeTransparency = 0.5
+    label.BorderSizePixel = 0
+    label.ZIndex = 9999
+    label.Text = ""
+    label.Parent = screenGui
+
+    alarm = Instance.new("Sound")
+    alarm.SoundId = "rbxassetid://2979857617"
+    alarm.Volume = 1.3
+    alarm.Looped = true
+    alarm.Parent = workspace
+end
+
+--------------------------------------------------------------------
+-- Fungsi hapus GUI
+--------------------------------------------------------------------
+local function removeGUI()
+    if screenGui then
+        screenGui:Destroy()
+        screenGui = nil
+    end
+    if alarm then
+        alarm:Stop()
+        alarm = nil
+    end
+    label = nil
+end
+
+--------------------------------------------------------------------
+-- Fungsi cari plot & timer
+--------------------------------------------------------------------
+local function findMyPlot()
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return end
+    for _, plot in ipairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        if sign and sign:FindFirstChild("YourBase") and sign.YourBase.Enabled then
+            return plot
+        end
+    end
+end
+
+local function getRemainingSeconds(plot)
+    for _, obj in ipairs(plot:GetDescendants()) do
+        if obj:IsA("TextLabel") and obj.Name == "RemainingTime" and obj.Visible then
+            local seconds = tonumber(obj.Text:match("(%d+)"))
+            return seconds
+        end
+    end
+end
+
+--------------------------------------------------------------------
+-- Toggle WindUI
+--------------------------------------------------------------------
+toggleMap["Reminder Lock"] = { value = false, toggle = nil }
+toggleMap["Reminder Lock"].toggle = VisualTab:Toggle({
+    Title = "Reminder Lock",
+    Desc = "Reminder Lock Your Base When 10Sec.",
+    Value = false,
+    Callback = function(state)
+        lockReminderEnabled = state
+        toggleMap["Reminder Lock"].value = state
+        WindUI:Notify({
+            Title = "Reminder Lock",
+            Content = state and "Enabled" or "Disabled",
+            Icon = "rbxassetid://114691672281339"
+        })
+
+        if state then
+            createGUI()
+        else
+            removeGUI()
+        end
+    end
+})
+
+--------------------------------------------------------------------
+-- Loop utama
+--------------------------------------------------------------------
+task.spawn(function()
+    while true do
+        if lockReminderEnabled and label then
+            local plot = findMyPlot()
+            if plot then
+                local remaining = getRemainingSeconds(plot)
+                if remaining then
+                    label.Text = "⏱️ Base Timer: " .. remaining .. "s"
+                    if remaining <= 10 then
+                        label.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        if not alarm.IsPlaying then
+                            alarm:Play()
+                        end
+                    else
+                        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        if alarm.IsPlaying then alarm:Stop() end
+                    end
+                else
+                    label.Text = "⛔ Base is Unlocked"
+                    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    TweenService:Create(label, TweenInfo.new(0.3), {
+                        BackgroundColor3 = Color3.fromRGB(50, 0, 0)
+                    }):Play()
+                    if alarm.IsPlaying then alarm:Stop() end
+                end
+            else
+                label.Text = "🔍 Searching for Base..."
+                label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                TweenService:Create(label, TweenInfo.new(0.3), {
+                    BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                }):Play()
+                if alarm.IsPlaying then alarm:Stop() end
+            end
+        end
+        task.wait(1)
+    end
+end)
 
 -- 📂 Other Section
 local OtherSection = Window:Section({
