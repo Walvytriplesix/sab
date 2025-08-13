@@ -87,7 +87,7 @@ end)
 
 -- Logic Tween To Base tanpa anti death
 
-local Y_OFFSET = 8
+local Y_OFFSET = 9
 local STOP_DISTANCE = 5
 
 local currentTween
