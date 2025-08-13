@@ -1269,6 +1269,9 @@ local function saveConfig()
     for name, data in pairs(toggleMap) do
         configData[name] = data.value or false
     end
+    -- Simpan AutoLoadConfig juga
+    configData["AutoLoadConfig"] = toggleMap["AutoLoadConfig"] and toggleMap["AutoLoadConfig"].value or false
+
     if isfile and writefile then
         if not isfolder(CONFIG_FOLDER) then
             local success, err = pcall(function() makefolder(CONFIG_FOLDER) end)
@@ -1371,6 +1374,7 @@ autoLoadToggle = ConfigTab:Toggle({
     Default = false,
     Callback = function(state)
         toggleMap["AutoLoadConfig"] = { value = state }
+        saveConfig() -- simpan otomatis setiap toggle diubah
         if state then
             loadConfig()
         end
@@ -1378,7 +1382,6 @@ autoLoadToggle = ConfigTab:Toggle({
 })
 
 -- ===== AUTO LOAD PADA SCRIPT START =====
--- Cek apakah file config ada
 local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
 if isfile and readfile and isfile(path) then
     local success, decoded = pcall(function()
@@ -1388,7 +1391,7 @@ if isfile and readfile and isfile(path) then
         if autoLoadToggle then
             autoLoadToggle:Set(true) -- Set toggle ON di GUI
         end
-        loadConfig() -- Load config otomatis
+        loadConfig() -- Load config otomatis saat script dijalankan / relog
     end
 end
 
