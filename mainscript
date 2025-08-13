@@ -1263,7 +1263,7 @@ local ConfigTab = ConfigSection:Tab({
     Icon = "folder"
 })
 
--- Fungsi saveConfig & loadConfig tetap sama
+-- Fungsi saveConfig
 local function saveConfig()
     local configData = {}
     for name, data in pairs(toggleMap) do
@@ -1299,6 +1299,7 @@ local function saveConfig()
     end
 end
 
+-- Fungsi loadConfig
 local function loadConfig()
     local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
     if isfile and readfile and isfile(path) then
@@ -1332,7 +1333,7 @@ local function loadConfig()
     end
 end
 
--- Input untuk Config Name
+-- Input Config Name
 ConfigTab:Input({
     Title = "Config Name",
     Placeholder = "Enter config name",
@@ -1363,18 +1364,33 @@ ConfigTab:Button({
 })
 
 -- Toggle Auto Load
-ConfigTab:Toggle({
+local autoLoadToggle
+autoLoadToggle = ConfigTab:Toggle({
     Title = "Auto Load Config",
     Desc = "Automatically load this config on script start.",
     Default = false,
     Callback = function(state)
         toggleMap["AutoLoadConfig"] = { value = state }
         if state then
-            -- Langsung load config sekarang jika toggle aktif
             loadConfig()
         end
     end
 })
+
+-- ===== AUTO LOAD PADA SCRIPT START =====
+-- Cek apakah file config ada
+local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
+if isfile and readfile and isfile(path) then
+    local success, decoded = pcall(function()
+        return HttpService:JSONDecode(readfile(path))
+    end)
+    if success and decoded["AutoLoadConfig"] then
+        if autoLoadToggle then
+            autoLoadToggle:Set(true) -- Set toggle ON di GUI
+        end
+        loadConfig() -- Load config otomatis
+    end
+end
 
 Window:SelectTab(1)
 game:BindToClose(function()
