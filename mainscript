@@ -59,7 +59,7 @@ local isFrozen = false
 local character, humanoid, hrp
 local speedConnection
 
-local BASE_SPEED_V1 = 30
+local BASE_SPEED_V1 = 23
 local BASE_SPEED_V2 = 50
 local DEFAULT_SPEED = 16
 local MOVE_THRESHOLD = 0.1
@@ -1263,15 +1263,11 @@ local ConfigTab = ConfigSection:Tab({
     Icon = "folder"
 })
 
--- Fungsi saveConfig
 local function saveConfig()
     local configData = {}
     for name, data in pairs(toggleMap) do
         configData[name] = data.value or false
     end
-    -- Simpan AutoLoadConfig juga
-    configData["AutoLoadConfig"] = toggleMap["AutoLoadConfig"] and toggleMap["AutoLoadConfig"].value or false
-
     if isfile and writefile then
         if not isfolder(CONFIG_FOLDER) then
             local success, err = pcall(function() makefolder(CONFIG_FOLDER) end)
@@ -1302,7 +1298,6 @@ local function saveConfig()
     end
 end
 
--- Fungsi loadConfig
 local function loadConfig()
     local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
     if isfile and readfile and isfile(path) then
@@ -1336,7 +1331,6 @@ local function loadConfig()
     end
 end
 
--- Input Config Name
 ConfigTab:Input({
     Title = "Config Name",
     Placeholder = "Enter config name",
@@ -1353,7 +1347,6 @@ ConfigTab:Input({
     end
 })
 
--- Button Save / Load
 ConfigTab:Button({
     Title = "Save Config",
     Desc = "Save current settings.",
@@ -1365,35 +1358,6 @@ ConfigTab:Button({
     Desc = "Load settings from file.",
     Callback = loadConfig
 })
-
--- Toggle Auto Load
-local autoLoadToggle
-autoLoadToggle = ConfigTab:Toggle({
-    Title = "Auto Load Config",
-    Desc = "Automatically load this config on script start.",
-    Default = false,
-    Callback = function(state)
-        toggleMap["AutoLoadConfig"] = { value = state }
-        saveConfig() -- simpan otomatis setiap toggle diubah
-        if state then
-            loadConfig()
-        end
-    end
-})
-
--- ===== AUTO LOAD PADA SCRIPT START =====
-local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
-if isfile and readfile and isfile(path) then
-    local success, decoded = pcall(function()
-        return HttpService:JSONDecode(readfile(path))
-    end)
-    if success and decoded["AutoLoadConfig"] then
-        if autoLoadToggle then
-            autoLoadToggle:Set(true) -- Set toggle ON di GUI
-        end
-        loadConfig() -- Load config otomatis saat script dijalankan / relog
-    end
-end
 
 Window:SelectTab(1)
 game:BindToClose(function()
