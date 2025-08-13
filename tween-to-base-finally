@@ -2,9 +2,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local PathfindingService = game:GetService("PathfindingService")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -16,58 +14,6 @@ player.CharacterAdded:Connect(function(c)
 	hrp = character:WaitForChild("HumanoidRootPart")
 	humanoid = character:WaitForChild("Humanoid")
 end)
-
--- Fungsi beli & equip-unequip Speed Coil
-local function buyAndEquipItem(itemName)
-    local success, err = pcall(function()
-        local remote = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/CoinsShopService/RequestBuy")
-        remote:InvokeServer(itemName)
-    end)
-    if success then
-        task.delay(0.5, function()
-            local backpack = player:WaitForChild("Backpack", 5)
-            local tool = backpack and backpack:FindFirstChild(itemName)
-            if tool then
-                local char = player.Character
-                if char then
-                    tool.Parent = char
-                    task.wait(0.25)
-                    tool.Parent = backpack
-                end
-            else
-                warn("Tool tidak ditemukan di Backpack: " .. itemName)
-            end
-        end)
-    else
-        warn("Gagal membeli item: " .. tostring(err))
-    end
-end
-
-local function buyAndEquipSpeedCoil()
-    buyAndEquipItem("Speed Coil") -- Ganti jika nama item berbeda
-
-    local backpack = player:WaitForChild("Backpack")
-    local tool
-
-    -- Tunggu sampai Speed Coil ada di backpack (max 10 detik)
-    for i = 1, 20 do
-        tool = backpack:FindFirstChild("Speed Coil")
-        if tool then break end
-        task.wait(0.5)
-    end
-
-    if tool then
-        local char = player.Character
-        if char then
-            tool.Parent = char
-            task.wait(0.3)
-            tool.Parent = backpack
-            print("Speed Coil sudah di-equip & unequip.")
-        end
-    else
-        warn("Speed Coil tidak ditemukan di Backpack setelah pembelian.")
-    end
-end
 
 -- GUI Setup
 local gui = Instance.new("ScreenGui")
@@ -106,7 +52,7 @@ tweenButton.ZIndex = 2
 Instance.new("UICorner", tweenButton).CornerRadius = UDim.new(0, 8)
 
 local statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Text = "Status: No Tweening"
+statusLabel.Text = "Status: Idle"
 statusLabel.Size = UDim2.new(1, 0, 0, 30)
 statusLabel.Position = UDim2.new(0, 0, 0.7, 0)
 statusLabel.BackgroundTransparency = 1
@@ -139,29 +85,15 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Anti Death & Anti Kick
-local function applyAntiDeath(state)
-	if humanoid then
-		for _, s in pairs({
-			Enum.HumanoidStateType.FallingDown,
-			Enum.HumanoidStateType.Ragdoll,
-			Enum.HumanoidStateType.PlatformStanding,
-			Enum.HumanoidStateType.Seated
-		}) do
-			humanoid:SetStateEnabled(s, not state)
-		end
-		if state then
-			humanoid.Health = humanoid.MaxHealth
-			humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-				if humanoid.Health <= 0 then
-					humanoid.Health = humanoid.MaxHealth
-				end
-			end)
-		end
-	end
-end
+-- Logic Tween To Base tanpa anti death
 
--- Cari posisi base
+local Y_OFFSET = 8
+local STOP_DISTANCE = 5
+
+local currentTween
+local active = false
+local walkThread
+
 local function getBasePosition()
 	local plots = workspace:FindFirstChild("Plots")
 	if not plots then return nil end
@@ -175,17 +107,13 @@ local function getBasePosition()
 	return nil
 end
 
-local Y_OFFSET = 7
-local STOP_DISTANCE = 5
-
-local currentTween
 local function tweenWalkTo(position)
 	if currentTween then currentTween:Cancel() end
 
 	local startPos = hrp.Position
 	local targetPos = Vector3.new(position.X, position.Y + Y_OFFSET, position.Z)
 	local distance = (targetPos - startPos).Magnitude
-	local speed = math.max(humanoid.WalkSpeed, 55)
+	local speed = math.max(humanoid.WalkSpeed, 23)
 	local duration = distance / speed
 	local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
 
@@ -196,9 +124,6 @@ local function tweenWalkTo(position)
 
 	currentTween.Completed:Wait()
 end
-
-local active = false
-local walkThread
 
 local function isAtBase(basePos)
 	if not basePos then return false end
@@ -247,12 +172,10 @@ end
 function startTweenToBase()
 	if active then return end
 	active = true
-	applyAntiDeath(true)
-	humanoid.WalkSpeed = 55 
+	humanoid.WalkSpeed = 23
 	statusLabel.Text = "Status: Walking to Base..."
 	tweenButton.Text = "▶ START AGAIN"
 	tweenButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-
 	walkThread = task.spawn(function()
 		while active do
 			walkToBase()
@@ -266,14 +189,11 @@ function stopTweenToBase()
 	active = false
 	if currentTween then currentTween:Cancel() end
 	if walkThread then task.cancel(walkThread) end
-	humanoid.WalkSpeed = 55
+	humanoid.WalkSpeed = 23
 	statusLabel.Text = "Status: Stopped"
 	tweenButton.Text = "▶ START TWEEN TO BASE"
 	tweenButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 end
-
--- Panggil otomatis beli & equip Speed Coil saat script dijalankan
-buyAndEquipSpeedCoil()
 
 -- Toggle tombol
 tweenButton.MouseButton1Click:Connect(function()
@@ -283,6 +203,3 @@ tweenButton.MouseButton1Click:Connect(function()
 		startTweenToBase()
 	end
 end)
-
--- Jangan auto start tween supaya manual lewat tombol
--- startTweenToBase()
