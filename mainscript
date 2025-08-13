@@ -59,8 +59,8 @@ local isFrozen = false
 local character, humanoid, hrp
 local speedConnection
 
-local BASE_SPEED_V1 = 60
-local BASE_SPEED_V2 = 68
+local BASE_SPEED_V1 = 50
+local BASE_SPEED_V2 = 60
 local DEFAULT_SPEED = 16
 local MOVE_THRESHOLD = 0.1
 
@@ -257,29 +257,73 @@ toggleMap["Speed Hack V2"].callback = toggleMap["Speed Hack V2"].toggle.Callback
 
 toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
     Title = "Infinity Jump",
-    Desc = "Need God Mode to work properly",
+    Desc = "Make Your Character Can Jump Infinity.",
     Value = false,
     Callback = function(state)
-        infinityJumpEnabled = state
         toggleMap["Infinity Jump"].value = state
+
+        -- Disconnect existing connections jika ada
         if connections.infinityJump then
             connections.infinityJump:Disconnect()
             connections.infinityJump = nil
         end
+        if connections.jumpSignals then
+            for _, conn in pairs(connections.jumpSignals) do
+                conn:Disconnect()
+            end
+            connections.jumpSignals = nil
+        end
+
         if state then
-            connections.infinityJump = UserInputService.JumpRequest:Connect(function()
-                local character = LocalPlayer.Character
-                if character then
-                    local humanoid = character:FindFirstChildWhichIsA("Humanoid")
-                    local hrp = character:FindFirstChild("HumanoidRootPart")
-                    if humanoid and hrp and humanoid:GetState() ~= Enum.HumanoidStateType.Seated then
-                        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                        if not humanoid.FloorMaterial or humanoid.FloorMaterial == Enum.Material.Air then
-                            hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-                        end
+            local Players = game:GetService("Players")
+            local RunService = game:GetService("RunService")
+            local player = Players.LocalPlayer
+
+            local boostForce = 6
+            local boostFrames = 7
+            local humanoid
+            local boosting = false
+            connections.jumpSignals = {}
+
+            local function stepBoost()
+                if boosting or not humanoid or humanoid.Health <= 0 then return end
+                local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                boosting = true
+
+                local frameCount = 0
+                local connection
+                connection = RunService.Heartbeat:Connect(function()
+                    if frameCount < boostFrames then
+                        root.Velocity = root.Velocity + Vector3.new(0, boostForce, 0)
+                        frameCount += 1
+                    else
+                        connection:Disconnect()
+                        boosting = false
                     end
-                end
-            end)
+                end)
+            end
+
+            local function hookJump(hum)
+                humanoid = hum
+                local conn = humanoid:GetPropertyChangedSignal("Jump"):Connect(function()
+                    if humanoid.Jump then
+                        stepBoost()
+                    end
+                end)
+                table.insert(connections.jumpSignals, conn)
+            end
+
+            local function onSpawn(char)
+                local hum = char:WaitForChild("Humanoid")
+                hookJump(hum)
+            end
+
+            connections.infinityJump = player.CharacterAdded:Connect(onSpawn)
+            if player.Character then
+                onSpawn(player.Character)
+            end
+
             WindUI:Notify({
                 Title = "Infinity Jump",
                 Content = "Enabled",
@@ -314,7 +358,7 @@ end
 
 toggleMap["God Mode"].toggle = PlayerTab:Toggle({
     Title = "God Mode",
-    Desc = "Enable if you want to use Infinity Jump.",
+    Desc = "Make Your Character Cant Death.",
     Value = false,
     Callback = function(state)
         godOn = state
@@ -979,7 +1023,7 @@ local StealingTab = OtherSection:Tab({
 -- Fungsi untuk memuat ulang skrip Tween To Base
 local function loadTweenToBaseScript()
     local success, err = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/tween-to-base-finally"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/script-tween-to-base-premium"))()
     end)
     if not success then
         tweenToBaseEnabled = false
@@ -1316,7 +1360,6 @@ ConfigTab:Button({
 })
 
 Window:SelectTab(1)
-
 game:BindToClose(function()
     for _, conn in pairs(connections) do
         if conn then
