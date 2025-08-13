@@ -279,7 +279,7 @@ toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
             local RunService = game:GetService("RunService")
             local player = Players.LocalPlayer
 
-            local boostForce = 6
+            local boostForce = 8
             local boostFrames = 7
             local humanoid
             local boosting = false
