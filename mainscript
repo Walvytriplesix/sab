@@ -59,7 +59,7 @@ local isFrozen = false
 local character, humanoid, hrp
 local speedConnection
 
-local BASE_SPEED_V1 = 35
+local BASE_SPEED_V1 = 23
 local BASE_SPEED_V2 = 50
 local DEFAULT_SPEED = 16
 local MOVE_THRESHOLD = 0.1
