@@ -1023,7 +1023,7 @@ local StealingTab = OtherSection:Tab({
 -- Fungsi untuk memuat ulang skrip Tween To Base
 local function loadTweenToBaseScript()
     local success, err = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/script-tween-to-base-premium"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/tween-to-base-finally"))()
     end)
     if not success then
         tweenToBaseEnabled = false
