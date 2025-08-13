@@ -1263,6 +1263,7 @@ local ConfigTab = ConfigSection:Tab({
     Icon = "folder"
 })
 
+-- Fungsi saveConfig & loadConfig tetap sama
 local function saveConfig()
     local configData = {}
     for name, data in pairs(toggleMap) do
@@ -1331,6 +1332,7 @@ local function loadConfig()
     end
 end
 
+-- Input untuk Config Name
 ConfigTab:Input({
     Title = "Config Name",
     Placeholder = "Enter config name",
@@ -1347,6 +1349,7 @@ ConfigTab:Input({
     end
 })
 
+-- Button Save / Load
 ConfigTab:Button({
     Title = "Save Config",
     Desc = "Save current settings.",
@@ -1357,6 +1360,20 @@ ConfigTab:Button({
     Title = "Load Config",
     Desc = "Load settings from file.",
     Callback = loadConfig
+})
+
+-- Toggle Auto Load
+ConfigTab:Toggle({
+    Title = "Auto Load Config",
+    Desc = "Automatically load this config on script start.",
+    Default = false,
+    Callback = function(state)
+        toggleMap["AutoLoadConfig"] = { value = state }
+        if state then
+            -- Langsung load config sekarang jika toggle aktif
+            loadConfig()
+        end
+    end
 })
 
 Window:SelectTab(1)
