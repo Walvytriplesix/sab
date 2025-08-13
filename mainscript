@@ -31,8 +31,6 @@ local Window = WindUI:CreateWindow({
 
 -- Define toggle mapping for easier state management
 local toggleMap = {
-    ["Speed Hack V1"] = { var = "speedOnV1", value = false, toggle = nil, callback = nil },
-    ["Speed Hack V2"] = { var = "speedOnV2", value = false, toggle = nil, callback = nil },
     ["Infinity Jump"] = { var = "infinityJumpEnabled", value = false, toggle = nil, callback = nil },
     ["God Mode"] = { var = "godOn", value = false, toggle = nil, callback = nil },
     ["Anti Ragdoll"] = { var = "arOn", value = false, toggle = nil, callback = nil },
@@ -45,8 +43,6 @@ local toggleMap = {
 }
 
 -- State variables
-local speedOnV1 = false
-local speedOnV2 = false
 local infinityJumpEnabled = false
 local godOn = false
 local arOn = false
@@ -58,11 +54,6 @@ local tweenToBaseEnabled = false
 local isFrozen = false
 local character, humanoid, hrp
 local speedConnection
-
-local BASE_SPEED_V1 = 23
-local BASE_SPEED_V2 = 50
-local DEFAULT_SPEED = 16
-local MOVE_THRESHOLD = 0.1
 
 -- 📌 Section & Tab pertama: Info
 local MainSection = Window:Section({
@@ -109,160 +100,29 @@ local PlayerTab = MainSection:Tab({
     Icon = "user"
 })
 
-local function buyAndEquipItem(itemName)
-    local success, err = pcall(function()
-        local remote = game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/CoinsShopService/RequestBuy")
-        remote:InvokeServer(itemName)
-    end)
-    if success then
-        task.delay(0.5, function()
-            local backpack = LocalPlayer:WaitForChild("Backpack", 5)
-            local tool = backpack and backpack:FindFirstChild(itemName)
-            if tool then
-                local char = LocalPlayer.Character
-                if char then
-                    tool.Parent = char
-                    task.wait(0.25)
-                    tool.Parent = backpack
-                end
-            else
-                warn("Tool tidak ditemukan di Backpack: " .. itemName)
-            end
-        end)
-    else
-        warn("Gagal membeli item: " .. tostring(err))
-    end
+-- Hapus toggle sebelumnya jika ada
+if toggleMap["Infinity Jump"] and toggleMap["Infinity Jump"].toggle then
+    toggleMap["Infinity Jump"].toggle:Destroy()
+    toggleMap["Infinity Jump"] = nil
 end
 
-local function updateCharacter()
-    character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    humanoid = character and character:WaitForChild("Humanoid", 5)
-    hrp = character and character:WaitForChild("HumanoidRootPart", 5)
-    if humanoid and hrp then
-        humanoid.WalkSpeed = speedOnV2 and BASE_SPEED_V2 or speedOnV1 and BASE_SPEED_V1 or DEFAULT_SPEED
-        humanoid.JumpPower = 50
-        if godOn then
-            humanoid.MaxHealth = 100
-            humanoid.Health = 100
-        end
-    end
-    if arOn and character then
-        monitorCharacter(character)
-    end
-end
+-- Inisialisasi table jika belum ada
+toggleMap = toggleMap or {}
+connections = connections or {}
 
-updateCharacter()
-connections.characterAdded = LocalPlayer.CharacterAdded:Connect(updateCharacter)
+-- Buat toggle baru tanpa binding tombol
+toggleMap["Infinity Jump"] = {}
+toggleMap["Infinity Jump"].value = false
 
-local function startSpeedHack()
-    if speedConnection then
-        speedConnection:Disconnect()
-        speedConnection = nil
-    end
-    if not (speedOnV1 or speedOnV2) then return end
-    speedConnection = RunService.Heartbeat:Connect(function()
-        if not (speedOnV1 or speedOnV2) or not humanoid or not hrp then return end
-        local currentSpeed = speedOnV2 and BASE_SPEED_V2 or BASE_SPEED_V1
-        local moveVec = Vector3.new(hrp.AssemblyLinearVelocity.X, 0, hrp.AssemblyLinearVelocity.Z)
-        local speed = moveVec.Magnitude
-        if speed > MOVE_THRESHOLD and humanoid.MoveDirection.Magnitude > 0 then
-            local dir = humanoid.MoveDirection.Unit
-            local newVelocity = Vector3.new(dir.X * currentSpeed, hrp.AssemblyLinearVelocity.Y, dir.Z * currentSpeed)
-            hrp.AssemblyLinearVelocity = newVelocity
-        else
-            hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0)
-        end
-    end)
-end
-
-toggleMap["Speed Hack V1"].toggle = PlayerTab:Toggle({
-    Title = "Speed Hack V1",
-    Desc = "Make Your Character Run Fast.",
-    Value = false,
-    Callback = function(state)
-        speedOnV1 = state
-        toggleMap["Speed Hack V1"].value = state
-        if state then
-            speedOnV2 = false
-            toggleMap["Speed Hack V2"].value = false
-            updateCharacter()
-            startSpeedHack()
-            buyAndEquipItem("Speed Coil")
-            WindUI:Notify({
-                Title = "Speed Hack V1",
-                Content = "Enabled",
-                Icon = "rbxassetid://114691672281339",
-                Duration = 5
-            })
-        else
-            if not speedOnV2 then
-                if speedConnection then
-                    speedConnection:Disconnect()
-                    speedConnection = nil
-                end
-                updateCharacter()
-                if hrp then hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0) end
-            end
-            WindUI:Notify({
-                Title = "Speed Hack V1",
-                Content = "Disabled",
-                Icon = "rbxassetid://114691672281339",
-                Duration = 5
-            })
-        end
-    end
-})
-toggleMap["Speed Hack V1"].callback = toggleMap["Speed Hack V1"].toggle.Callback
-
-toggleMap["Speed Hack V2"].toggle = PlayerTab:Toggle({
-    Title = "Speed Hack V2",
-    Desc = "Make Your Character Run Very Fast.",
-    Value = false,
-    Callback = function(state)
-        speedOnV2 = state
-        toggleMap["Speed Hack V2"].value = state
-        if state then
-            speedOnV1 = false
-            toggleMap["Speed Hack V1"].value = false
-            updateCharacter()
-            startSpeedHack()
-            buyAndEquipItem("Invisibility Cloak")
-            task.wait(1)
-            buyAndEquipItem("Invisibility Cloak")
-            WindUI:Notify({
-                Title = "Speed Hack V2",
-                Content = "Enabled + Invisibility Cloak purchased (2x)",
-                Icon = "rbxassetid://114691672281339",
-                Duration = 5
-            })
-        else
-            if not speedOnV1 then
-                if speedConnection then
-                    speedConnection:Disconnect()
-                    speedConnection = nil
-                end
-                updateCharacter()
-                if hrp then hrp.AssemblyLinearVelocity = Vector3.new(0, hrp.AssemblyLinearVelocity.Y, 0) end
-            end
-            WindUI:Notify({
-                Title = "Speed Hack V2",
-                Content = "Disabled",
-                Icon = "rbxassetid://114691672281339",
-                Duration = 5
-            })
-        end
-    end
-})
-toggleMap["Speed Hack V2"].callback = toggleMap["Speed Hack V2"].toggle.Callback
-
+-- Fungsi utama untuk Infinity Jump
 toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
     Title = "Infinity Jump",
-    Desc = "Make Your Character Can Jump Infinity (Safe Version).",
+    Desc = "Enable Infinite Jump (Bypass Enhanced).",
     Value = false,
     Callback = function(state)
         toggleMap["Infinity Jump"].value = state
 
-        -- Disconnect existing connections jika ada
+        -- Disconnect koneksi sebelumnya jika ada
         if connections.infinityJump then
             connections.infinityJump:Disconnect()
             connections.infinityJump = nil
@@ -276,6 +136,7 @@ toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
 
         local Players = game:GetService("Players")
         local RunService = game:GetService("RunService")
+        local UserInputService = game:GetService("UserInputService")
         local player = Players.LocalPlayer
 
         local boostForce = 8
@@ -283,6 +144,17 @@ toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
         local humanoid
         local boosting = false
         connections.jumpSignals = {}
+
+        -- Fungsi untuk bypass anti-cheat
+        local function bypassAntiCheat(root)
+            if root then
+                -- Mengatur properti untuk menghindari deteksi anti-cheat
+                pcall(function()
+                    root.Velocity = root.Velocity + Vector3.new(0, 0.01, 0)
+                    root.AssemblyLinearVelocity = root.Velocity
+                end)
+            end
+        end
 
         local function stepBoost()
             if boosting or not humanoid or humanoid.Health <= 0 then return end
@@ -294,6 +166,7 @@ toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
             local connection
             connection = RunService.Heartbeat:Connect(function()
                 if frameCount < boostFrames then
+                    bypassAntiCheat(root)
                     root.Velocity = root.Velocity + Vector3.new(0, boostForce, 0)
                     frameCount += 1
                 else
@@ -305,8 +178,8 @@ toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
 
         local function hookJump(hum)
             humanoid = hum
-            local conn = humanoid:GetPropertyChangedSignal("Jump"):Connect(function()
-                if humanoid.Jump and state then
+            local conn = UserInputService.JumpRequest:Connect(function()
+                if state and humanoid and humanoid.Health > 0 then
                     stepBoost()
                 end
             end)
@@ -314,8 +187,10 @@ toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
         end
 
         local function onSpawn(char)
-            local hum = char:WaitForChild("Humanoid")
-            hookJump(hum)
+            local hum = char:WaitForChild("Humanoid", 5)
+            if hum then
+                hookJump(hum)
+            end
         end
 
         if state then
@@ -326,18 +201,21 @@ toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
 
             WindUI:Notify({
                 Title = "Infinity Jump",
-                Content = "Enabled ✅",
-                Icon = "rbxassetid://114691672281339"
+                Content = "Enabled",
+                Icon = "rbxassetid://114691672281339",
+                Duration = 3
             })
         else
             WindUI:Notify({
                 Title = "Infinity Jump",
-                Content = "Disabled ❌",
-                Icon = "rbxassetid://114691672281339"
+                Content = "Disabled",
+                Icon = "rbxassetid://114691672281339",
+                Duration = 3
             })
         end
     end
 })
+
 toggleMap["Infinity Jump"].callback = toggleMap["Infinity Jump"].toggle.Callback
 
 local function applyGodMode()
@@ -946,7 +824,6 @@ end
 --------------------------------------------------------------------
 -- Toggle WindUI
 --------------------------------------------------------------------
-toggleMap["Reminder Lock"] = { value = false, toggle = nil }
 toggleMap["Reminder Lock"].toggle = VisualTab:Toggle({
     Title = "Reminder Lock",
     Desc = "Reminder Lock Your Base When 10Sec.",
