@@ -21,7 +21,7 @@ local Window = WindUI:CreateWindow({
     IconThemed = true,
     Author = "VERSION: FREEMIUM",
     Folder = CONFIG_FOLDER,
-    Size = UDim2.fromOffset(480, 480),
+    Size = UDim2.fromOffset(600, 480),
     Theme = "Dark",
     SideBarWidth = 170,
     Transparent = false,
@@ -167,129 +167,87 @@ toggleMap["Speedhackv1"].toggle = PlayerTab:Toggle({ -- Changed from StealingTab
 })
 toggleMap["Speedhackv1"].callback = toggleMap["Speedhackv1"].toggle.Callback
 
--- 🌟 Infinity Jump Anti-Kick (Loadstring + Toggleable)
-
--- Toggle state
+-- Variabel state toggle
 local infinityJumpEnabled = false
 
--- Global table untuk koneksi
-getgenv().InfinityJumpConnections = getgenv().InfinityJumpConnections or {}
-
--- Cleanup function
-getgenv().InfinityJumpCleanup = function()
-    for _, conn in pairs(getgenv().InfinityJumpConnections) do
-        if conn.Connected then
-            conn:Disconnect()
-        end
-    end
-    getgenv().InfinityJumpConnections = {}
-end
-
--- Fungsi untuk load Infinity Jump
+-- Fungsi untuk memuat Infinity Jump dari URL
 local function loadInfinityJump()
     local success, err = pcall(function()
-        local Players = game:GetService("Players")
-        local RunService = game:GetService("RunService")
-        local UserInputService = game:GetService("UserInputService")
-        local player = Players.LocalPlayer
-        local humanoid
-        local boosting = false
-        local boostForce = 25
-        local boostFrames = 2
-        local boostCooldown = 0.12
-        local lastBoost = 0
-
-        -- Fungsi BodyVelocity sementara
-        local function applyBoost(root)
-            if not root or boosting then return end
-            local now = tick()
-            if now - lastBoost < boostCooldown then return end
-            lastBoost = now
-            boosting = true
-
-            local bv = Instance.new("BodyVelocity")
-            bv.MaxForce = Vector3.new(0, math.huge, 0)
-            bv.P = 1250
-            bv.Velocity = Vector3.new(root.Velocity.X, boostForce, root.Velocity.Z)
-            bv.Parent = root
-
-            local frameCount = 0
-            local conn
-            conn = RunService.Heartbeat:Connect(function()
-                if frameCount < boostFrames then
-                    frameCount += 1
-                    bv.Velocity = bv.Velocity + Vector3.new(0, 0.01, 0)
-                else
-                    bv:Destroy()
-                    conn:Disconnect()
-                    boosting = false
-                end
-            end)
-            table.insert(getgenv().InfinityJumpConnections, conn)
-        end
-
-        -- Heartbeat loop utama
-        local hbConn = RunService.Heartbeat:Connect(function()
-            if humanoid and humanoid.Health > 0 then
-                local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
-                if root and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                    applyBoost(root)
-                end
-            end
-        end)
-        table.insert(getgenv().InfinityJumpConnections, hbConn)
-
-        -- Hook CharacterAdded
-        local function onSpawn(char)
-            humanoid = char:WaitForChild("Humanoid", 5)
-        end
-
-        local charConn = player.CharacterAdded:Connect(onSpawn)
-        table.insert(getgenv().InfinityJumpConnections, charConn)
-
-        if player.Character then
-            onSpawn(player.Character)
-        end
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/infinity-jump-antikick"))()
     end)
     if not success then
-        warn("Failed to load Infinity Jump:", err)
+        infinityJumpEnabled = false
+        toggleMap["Infinity Jump"].value = false
+        toggleMap["Infinity Jump"].toggle:Set(false)
         WindUI:Notify({
             Title = "Infinity Jump",
-            Content = "Failed to load: "..tostring(err),
+            Content = "Failed to load Infinity Jump: " .. tostring(err),
             Icon = "alert-triangle"
         })
+        return false
+    end
+    return true
+end
+
+-- Fungsi cleanup ketika toggle OFF
+local function cleanupInfinityJump()
+    if getgenv().InfinityJumpCleanup then
+        pcall(function()
+            getgenv().InfinityJumpCleanup()
+        end)
+    end
+    local playerGui = game.Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if playerGui then
+        local gui = playerGui:FindFirstChild("WalvyInfinityJumpGui")
+        if gui then
+            gui:Destroy()
+        end
     end
 end
 
--- Fungsi toggle
-local function toggleInfinityJump(state)
-    infinityJumpEnabled = state
-    if state then
-        loadInfinityJump()
-        WindUI:Notify({
-            Title = "Infinity Jump",
-            Content = "Enabled",
-            Icon = "rbxassetid://114691672281339"
-        })
-    else
-        getgenv().InfinityJumpCleanup()
-        WindUI:Notify({
-            Title = "Infinity Jump",
-            Content = "Disabled",
-            Icon = "rbxassetid://114691672281339"
-        })
-    end
-end
-
--- Tambahkan toggle ke WindUI
+-- Tambahkan toggle ke tab WindUI
 toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
     Title = "Infinity Jump",
     Desc = "Enable Infinite Jump with Anti-Kick",
     Value = false,
-    Callback = toggleInfinityJump
+    Callback = function(state)
+        infinityJumpEnabled = state
+        toggleMap["Infinity Jump"].value = state
+        if state then
+            if loadInfinityJump() then
+                WindUI:Notify({
+                    Title = "Infinity Jump",
+                    Content = "Enabled",
+                    Icon = "rbxassetid://114691672281339"
+                })
+            end
+        else
+            cleanupInfinityJump()
+            WindUI:Notify({
+                Title = "Infinity Jump",
+                Content = "Disabled",
+                Icon = "rbxassetid://114691672281339"
+            })
+        end
+    end
 })
 toggleMap["Infinity Jump"].callback = toggleMap["Infinity Jump"].toggle.Callback
-toggleMap["Infinity Jump"].value = false
+
+local function applyGodMode()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.MaxHealth = 100
+        hum.Health = 100
+        if connections.god then connections.god:Disconnect() end
+        connections.god = hum.HealthChanged:Connect(function(h)
+            if godOn and h < 100 then
+                hum.Health = 100
+            end
+        end)
+    end
+end
 
 toggleMap["God Mode"].toggle = PlayerTab:Toggle({
     Title = "God Mode",
@@ -725,6 +683,8 @@ toggleMap["Player ESP"].toggle = VisualTab:Toggle({
 toggleMap["Player ESP"].callback = toggleMap["Player ESP"].toggle.Callback
 
 local activeLockTimerESPParts = {}
+local lastTimerValue = {}
+local lastTimerTick = {}
 
 local function clearLockTimerESP()
     for _, esp in ipairs(activeLockTimerESPParts) do
@@ -733,27 +693,33 @@ local function clearLockTimerESP()
     table.clear(activeLockTimerESPParts)
 end
 
-local function createLockTimerESP(targetPart, text)
+local function createLockTimerESP(targetPart, text, color, textColor)
     if not targetPart or not targetPart:IsA("BasePart") then return end
+
     local highlight = Instance.new("Highlight")
-    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.FillColor = color or Color3.fromRGB(255, 0, 0)
     highlight.FillTransparency = 0.5
+    highlight.Adornee = targetPart
+    highlight.Parent = targetPart
+
     local billboard = Instance.new("BillboardGui")
     billboard.Size = UDim2.new(0, 100, 0, 30)
     billboard.Adornee = targetPart
     billboard.AlwaysOnTop = true
     billboard.Name = "LockTimerESP"
     billboard.Parent = targetPart
+
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextColor3 = textColor or Color3.fromRGB(255, 255, 255) -- default putih
     label.TextStrokeColor3 = Color3.new(0, 0, 0)
     label.TextStrokeTransparency = 0
     label.TextScaled = true
     label.Font = Enum.Font.SourceSansBold
     label.Parent = billboard
+
     table.insert(activeLockTimerESPParts, billboard)
     table.insert(activeLockTimerESPParts, highlight)
 end
@@ -764,8 +730,10 @@ connections.lockTimerESP = RunService.Heartbeat:Connect(function()
         return
     end
     clearLockTimerESP()
+
     local plots = workspace:FindFirstChild("Plots")
     if not plots then return end
+
     for _, plot in ipairs(plots:GetChildren()) do
         local plotBlock = plot:FindFirstChild("PlotBlock", true)
         if plotBlock then
@@ -775,7 +743,31 @@ connections.lockTimerESP = RunService.Heartbeat:Connect(function()
                 if billboardGui then
                     local label = billboardGui:FindFirstChild("RemainingTime")
                     if label and label:IsA("TextLabel") then
-                        createLockTimerESP(main, label.Text)
+                        local rawText = tostring(label.Text)
+                        local text = rawText
+                        local color = Color3.fromRGB(255, 0, 0) -- default merah
+                        local textColor = Color3.fromRGB(255, 255, 255) -- default putih
+
+                        local id = plot:GetDebugId()
+                        if lastTimerValue[id] ~= rawText then
+                            lastTimerValue[id] = rawText
+                            lastTimerTick[id] = tick()
+                        end
+
+                        local stuck = lastTimerTick[id] and (tick() - lastTimerTick[id] > 5)
+
+                        -- Unlock conditions
+                        if rawText == "" 
+                            or rawText:match("^0+$") 
+                            or rawText:match("^0[%D]+0*$") 
+                            or stuck then
+                            
+                            text = "Unlock"
+                            color = Color3.fromRGB(0, 255, 0) -- hijau
+                            textColor = Color3.fromRGB(0, 255, 0) -- hijau juga
+                        end
+
+                        createLockTimerESP(main, text, color, textColor)
                     end
                 end
             end
@@ -1016,10 +1008,7 @@ toggleMap["Tween To Base"].toggle = StealingTab:Toggle({
 })
 toggleMap["Tween To Base"].callback = toggleMap["Tween To Base"].toggle.Callback
 
-local ShopTab = OtherSection:Tab({
-    Title = "Shop",
-    Icon = "shopping-cart"
-})
+local ShopTab = OtherSection:Tab({ Title = "Shop", Icon = "shopping-cart" })
 
 ShopTab:Button({
     Title = "Buy All Stealing Tools",
