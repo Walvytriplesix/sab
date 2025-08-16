@@ -191,8 +191,8 @@ local function loadInfinityJump()
         local humanoid
         local boosting = false
         local boostForce = 24
-        local boostFrames = 4
-        local boostCooldown = 0 -- set 0 biar ga ada delay
+        local boostFrames = 2
+        local boostCooldown = 0.12
         local lastBoost = 0
 
         -- Fungsi BodyVelocity sementara
@@ -224,9 +224,9 @@ local function loadInfinityJump()
             table.insert(getgenv().InfinityJumpConnections, conn)
         end
 
-        -- Heartbeat loop utama (PC - Spacebar)
+        -- Heartbeat loop utama
         local hbConn = RunService.Heartbeat:Connect(function()
-            if infinityJumpEnabled and humanoid and humanoid.Health > 0 then
+            if humanoid and humanoid.Health > 0 then
                 local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
                 if root and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                     applyBoost(root)
@@ -245,7 +245,7 @@ local function loadInfinityJump()
             end
         end)
         table.insert(getgenv().InfinityJumpConnections, jrConn)
-
+        
         -- Hook CharacterAdded
         local function onSpawn(char)
             humanoid = char:WaitForChild("Humanoid", 5)
