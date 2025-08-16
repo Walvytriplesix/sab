@@ -99,29 +99,73 @@ local PlayerTab = MainSection:Tab({
     Icon = "user"
 })
 
--- Variabel state toggle
-local myScriptEnabled = false
+-- ===== Services =====
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
 
--- Fungsi untuk memuat skrip dari URL
+-- ===== Vars =====
+local myScriptEnabled = false
+local isLoading = false -- Prevent concurrent loading
+local lastNotification = 0 -- Cooldown for notifications
+local NOTIFICATION_COOLDOWN = 5 -- Seconds between notifications
+
+-- Pastikan toggleMap ada
+if not toggleMap then
+    toggleMap = {}
+end
+toggleMap["Speedhackv1"] = {value = false, toggle = nil, callback = nil}
+
+-- ===== Fungsi Load Script =====
 local function loadMyScript()
+    if isLoading then return false end -- Prevent concurrent loading
+    isLoading = true
+
+    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if not playerGui then
+        isLoading = false
+        return false
+    end
+
+    if playerGui:FindFirstChild("WalvySpeedhackGui") or getgenv().SpeedHackLoaded then
+        isLoading = false
+        return true
+    end
+
     local success, err = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/SPEED%20HACCK%20WITH%20ENC"))()
+        local response = game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/SPEED%20HACCK%20WITH%20ENC")
+        if not response or response == "" then
+            error("Empty response from HttpGet")
+        end
+        loadstring(response)()
+        getgenv().SpeedHackLoaded = true
     end)
+
     if not success then
         myScriptEnabled = false
         toggleMap["Speedhackv1"].value = false
-        toggleMap["Speedhackv1"].toggle:Set(false)
-        WindUI:Notify({
-            Title = "Speed Hack",
-            Content = "Failed to load speed hack: " .. tostring(err),
-            Icon = "alert-triangle"
-        })
+        if toggleMap["Speedhackv1"].toggle then
+            pcall(function()
+                toggleMap["Speedhackv1"].toggle:Set(false)
+            end)
+        end
+        if WindUI and (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
+            WindUI:Notify({
+                Title = "Speed Hack",
+                Content = "Failed to load speed hack: " .. tostring(err),
+                Icon = "alert-triangle"
+            })
+            lastNotification = os.clock()
+        end
+        isLoading = false
         return false
     end
+
+    isLoading = false
     return true
 end
 
--- Fungsi cleanup ketika toggle OFF
+-- ===== Fungsi Cleanup =====
 local function cleanupMyScript()
     if getgenv().MyScriptCleanup then
         pcall(function()
@@ -135,35 +179,71 @@ local function cleanupMyScript()
             gui:Destroy()
         end
     end
+    getgenv().SpeedHackLoaded = nil
+    getgenv().MyScriptCleanup = nil
 end
 
--- Tambahkan toggle ke tab WindUI
-toggleMap["Speedhackv1"].toggle = PlayerTab:Toggle({ -- Changed from StealingTab to PlayerTab
-    Title = "Speed Hack",
-    Desc = "Make Your Character Move Faster With GUI",
-    Value = false,
-    Callback = function(state)
-        myScriptEnabled = state
-        toggleMap["Speedhackv1"].value = state
-        if state then
-            if loadMyScript() then
+-- ===== Tambahkan Toggle ke WindUI =====
+if WindUI and PlayerTab then
+    -- Pastikan toggle hanya dibuat sekali
+    if not toggleMap["Speedhackv1"].toggle then
+        toggleMap["Speedhackv1"].toggle = PlayerTab:Toggle({
+            Title = "Speed Hack",
+            Desc = "You Need Rebirth 4 To Use",
+            Value = false,
+            Callback = function(state)
+                myScriptEnabled = state
+                toggleMap["Speedhackv1"].value = state
+                if state then
+                    if loadMyScript() and (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
+                        WindUI:Notify({
+                            Title = "Speed Hack",
+                            Content = "Enabled",
+                            Icon = "rbxassetid://114691672281339"
+                        })
+                        lastNotification = os.clock()
+                    end
+                else
+                    cleanupMyScript()
+                    if (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
+                        WindUI:Notify({
+                            Title = "Speed Hack",
+                            Content = "Disabled",
+                            Icon = "rbxassetid://114691672281339"
+                        })
+                        lastNotification = os.clock()
+                    end
+                end
+            end
+        })
+        toggleMap["Speedhackv1"].callback = toggleMap["Speedhackv1"].toggle.Callback
+    end
+
+    -- ===== Cek GUI hanya sekali saat load =====
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if playerGui and playerGui:FindFirstChild("WalvySpeedhackGui") and not getgenv().SpeedHackLoaded then
+            myScriptEnabled = true
+            toggleMap["Speedhackv1"].value = true
+            if toggleMap["Speedhackv1"].toggle then
+                pcall(function()
+                    toggleMap["Speedhackv1"].toggle:Set(true)
+                end)
+            end
+            loadMyScript()
+            if WindUI and (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
                 WindUI:Notify({
                     Title = "Speed Hack",
-                    Content = "Enabled",
+                    Content = "Automatically Enabled",
                     Icon = "rbxassetid://114691672281339"
                 })
+                lastNotification = os.clock()
             end
-        else
-            cleanupMyScript()
-            WindUI:Notify({
-                Title = "Speed Hack",
-                Content = "Disabled",
-                Icon = "rbxassetid://114691672281339"
-            })
+            connection:Disconnect() -- Hentikan loop setelah GUI ditemukan
         end
-    end
-})
-toggleMap["Speedhackv1"].callback = toggleMap["Speedhackv1"].toggle.Callback
+    end)
+end
 
 -- Toggle state
 local infinityJumpEnabled = false
@@ -1091,6 +1171,89 @@ HopeServerTab:Button({
             Content = success and ("Teleporting to Job ID: " .. currentJobId) or ("Failed: " .. tostring(err)),
             Icon = "rbxassetid://114691672281339"
         })
+    end
+})
+
+-- Tombol Rejoin Current Server
+HopeServerTab:Button({
+    Title = "Rejoin Current Server",
+    Desc = "Rejoins the current server",
+    Callback = function()
+        local success, err = pcall(function()
+            -- Cleanup connections
+            if connections then
+                for _, conn in pairs(connections) do
+                    if conn then
+                        if typeof(conn) == "thread" then
+                            task.cancel(conn)
+                        elseif typeof(conn) == "RBXScriptConnection" then
+                            conn:Disconnect()
+                        end
+                    end
+                end
+                connections = {}
+            end
+            -- Hapus ESP
+            if ESPFolder and ESPFolder:IsA("Folder") then
+                ESPFolder:Destroy()
+            end
+            for _, obj in pairs(workspace:GetChildren()) do
+                local esp = obj:FindFirstChild("ESP")
+                if esp then esp:Destroy() end
+            end
+            -- Rejoin server
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end)
+        WindUI:Notify({
+            Title = success and "Rejoin" or "Rejoin Error",
+            Content = success and "Rejoining current server" or ("Failed to rejoin: " .. tostring(err)),
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+-- Tombol Copy Current Job ID
+HopeServerTab:Button({
+    Title = "Copy Current Job ID",
+    Desc = "Copies the current Job ID to clipboard",
+    Callback = function()
+        local success, err = pcall(function()
+            if not setclipboard then
+                error("setclipboard function not available")
+            end
+            setclipboard(game.JobId)
+        end)
+        WindUI:Notify({
+            Title = success and "Copied" or "Copy Error",
+            Content = success and "Current Job ID copied to clipboard" or ("Failed to copy Job ID: " .. tostring(err)),
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+-- Tombol Hope Server (hanya public server)
+HopeServerTab:Button({
+    Title = "Hope Server",
+    Desc = "Only Work On Public Server",
+    Callback = function()
+        HopeserverEnabled = not HopeserverEnabled
+        if HopeserverEnabled then
+            loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
+            WindUI:Notify({
+                Title = "Hope Server",
+                Content = "Enabled",
+                Icon = "rbxassetid://114691672281339"
+            })
+        else
+            if getgenv().TweenToBaseCleanup then
+                getgenv().TweenToBaseCleanup()
+            end
+            WindUI:Notify({
+                Title = "Hope Server",
+                Content = "Disabled",
+                Icon = "rbxassetid://114691672281339"
+            })
+        end
     end
 })
 
