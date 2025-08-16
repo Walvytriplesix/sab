@@ -21,7 +21,7 @@ local Window = WindUI:CreateWindow({
     IconThemed = true,
     Author = "VERSION: FREEMIUM",
     Folder = CONFIG_FOLDER,
-    Size = UDim2.fromOffset(580, 480),
+    Size = UDim2.fromOffset(570, 480),
     Theme = "Dark",
     SideBarWidth = 170,
     Transparent = false,
@@ -165,8 +165,6 @@ toggleMap["Speedhackv1"].toggle = PlayerTab:Toggle({ -- Changed from StealingTab
 })
 toggleMap["Speedhackv1"].callback = toggleMap["Speedhackv1"].toggle.Callback
 
--- 🌟 Infinity Jump Anti-Kick (Loadstring + Toggleable)
-
 -- Toggle state
 local infinityJumpEnabled = false
 
@@ -194,8 +192,8 @@ local function loadInfinityJump()
         local boosting = false
         local boostForce = 24
         local boostFrames = 4
-        local boostCooldown = 0.12
-        local lastBoost = 1
+        local boostCooldown = 0 -- set 0 biar ga ada delay
+        local lastBoost = 0
 
         -- Fungsi BodyVelocity sementara
         local function applyBoost(root)
@@ -226,9 +224,9 @@ local function loadInfinityJump()
             table.insert(getgenv().InfinityJumpConnections, conn)
         end
 
-        -- Heartbeat loop utama
+        -- Heartbeat loop utama (PC - Spacebar)
         local hbConn = RunService.Heartbeat:Connect(function()
-            if humanoid and humanoid.Health > 0 then
+            if infinityJumpEnabled and humanoid and humanoid.Health > 0 then
                 local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
                 if root and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                     applyBoost(root)
@@ -236,6 +234,17 @@ local function loadInfinityJump()
             end
         end)
         table.insert(getgenv().InfinityJumpConnections, hbConn)
+
+        -- Event JumpRequest (Android Jump Button + PC juga jalan)
+        local jrConn = UserInputService.JumpRequest:Connect(function()
+            if infinityJumpEnabled and humanoid and humanoid.Health > 0 then
+                local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+                if root then
+                    applyBoost(root)
+                end
+            end
+        end)
+        table.insert(getgenv().InfinityJumpConnections, jrConn)
 
         -- Hook CharacterAdded
         local function onSpawn(char)
