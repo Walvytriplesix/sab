@@ -21,7 +21,7 @@ local Window = WindUI:CreateWindow({
     IconThemed = true,
     Author = "VERSION: FREEMIUM",
     Folder = CONFIG_FOLDER,
-    Size = UDim2.fromOffset(480, 480),
+    Size = UDim2.fromOffset(580, 480),
     Theme = "Dark",
     SideBarWidth = 170,
     Transparent = false,
@@ -35,7 +35,6 @@ local toggleMap = {
 	["Infinity Jump"] = { var = "infinityJumpEnabled", value = false, toggle = nil, callback = nil },
     ["God Mode"] = { var = "godOn", value = false, toggle = nil, callback = nil },
     ["Anti Ragdoll"] = { var = "arOn", value = false, toggle = nil, callback = nil },
-    ["Anti Trap"] = { var = "trapOn", value = false, toggle = nil, callback = nil },
     ["Brainrot ESP"] = { var = "brainrotESPEnabled", value = false, toggle = nil, callback = nil },
     ["Player ESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
     ["ESP Lock Timer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
@@ -48,7 +47,6 @@ local Speedhackv1Enable = false
 local infinityJumpEnabled = false  -- baru
 local godOn = false
 local arOn = false
-local trapOn = false
 local brainrotESPEnabled = false
 local playerESPEnabled = false
 local lockTimerESPEnabled = false
@@ -194,10 +192,10 @@ local function loadInfinityJump()
         local player = Players.LocalPlayer
         local humanoid
         local boosting = false
-        local boostForce = 25
-        local boostFrames = 2
+        local boostForce = 24
+        local boostFrames = 4
         local boostCooldown = 0.12
-        local lastBoost = 0
+        local lastBoost = 1
 
         -- Fungsi BodyVelocity sementara
         local function applyBoost(root)
@@ -392,64 +390,6 @@ toggleMap["Anti Ragdoll"].toggle = PlayerTab:Toggle({
     end
 })
 toggleMap["Anti Ragdoll"].callback = toggleMap["Anti Ragdoll"].toggle.Callback
-
-toggleMap["Anti Trap"].toggle = PlayerTab:Toggle({
-    Title = "Anti Trap",
-    Desc = "Make Your Character Not Trapped (no working anymore)",
-    Value = false,
-    Callback = function(state)
-        print("Anti Trap state changed to: " .. tostring(state)) -- Debugging: Menunjukkan perubahan status
-        trapOn = state
-        toggleMap["Anti Trap"].value = state
-
-        -- Fungsi lokal untuk menghancurkan semua TouchTransmitter yang ada
-        local function destroyAllTouchTransmitters()
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if obj:IsA("BasePart") then
-                    for _, child in ipairs(obj:GetChildren()) do
-                        if child:IsA("TouchTransmitter") then
-                            child:Destroy()
-                            print("Initial TouchTransmitter destroyed: " .. obj.Name) -- Debugging: Konfirmasi penghancuran awal
-                        end
-                    end
-                end
-            end
-        end
-
-        if state then
-            -- Jika Anti Trap diaktifkan
-            destroyAllTouchTransmitters() -- Hancurkan TouchTransmitter yang sudah ada
-            
-            -- Hubungkan ke event DescendantAdded untuk menghancurkan TouchTransmitter baru
-            connections.trap = workspace.DescendantAdded:Connect(function(obj)
-                if obj:IsA("TouchTransmitter") and obj.Parent and obj.Parent:IsA("BasePart") then
-                    obj:Destroy()
-                    print("New TouchTransmitter destroyed: " .. obj.Name) -- Debugging: Konfirmasi penghancuran yang baru
-                end
-            end)
-            print("Anti Trap connection established. Actively destroying TouchTransmitters.") -- Debugging: Konfirmasi koneksi aktif
-            
-            WindUI:Notify({
-                Title = "Anti Trap",
-                Content = "Enabled - Trap protection active",
-                Icon = "rbxassetid://114691672281339"
-            })
-        else
-            -- Jika Anti Trap dimatikan
-            if connections.trap then
-                connections.trap:Disconnect() -- Putuskan koneksi event
-                connections.trap = nil
-                print("Anti Trap connection disconnected.") -- Debugging: Konfirmasi koneksi terputus
-            end
-            WindUI:Notify({
-                Title = "Anti Trap",
-                Content = "Disabled",
-                Icon = "rbxassetid://114691672281339"
-            })
-        end
-    end
-})
-toggleMap["Anti Trap"].callback = toggleMap["Anti Trap"].toggle.Callback
 
 -- 🧍‍♂️ Visual Tab
 local VisualTab = MainSection:Tab({
@@ -755,7 +695,7 @@ local function createLockTimerESP(targetPart, text, color, textColor)
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = text
-    label.TextColor3 = textColor or Color3.fromRGB(255, 255, 255) -- default putih
+    label.TextColor3 = textColor or Color3.fromRGB(255, 255, 255)
     label.TextStrokeColor3 = Color3.new(0, 0, 0)
     label.TextStrokeTransparency = 0
     label.TextScaled = true
@@ -787,26 +727,28 @@ connections.lockTimerESP = RunService.Heartbeat:Connect(function()
                     if label and label:IsA("TextLabel") then
                         local rawText = tostring(label.Text)
                         local text = rawText
-                        local color = Color3.fromRGB(255, 0, 0) -- default merah
-                        local textColor = Color3.fromRGB(255, 255, 255) -- default putih
+                        local color = Color3.fromRGB(255, 0, 0)
+                        local textColor = Color3.fromRGB(255, 255, 255)
 
                         local id = plot:GetDebugId()
+
+                        -- simpan perubahan timer
                         if lastTimerValue[id] ~= rawText then
                             lastTimerValue[id] = rawText
                             lastTimerTick[id] = tick()
                         end
 
-                        local stuck = lastTimerTick[id] and (tick() - lastTimerTick[id] > 5)
+                        -- stuck check: kalau tidak berubah >3 detik, dianggap Unlock
+                        local stuck = lastTimerTick[id] and (tick() - lastTimerTick[id] > 3)
 
-                        -- Unlock conditions
                         if rawText == "" 
                             or rawText:match("^0+$") 
                             or rawText:match("^0[%D]+0*$") 
                             or stuck then
-                            
+
                             text = "Unlock"
-                            color = Color3.fromRGB(0, 255, 0) -- hijau
-                            textColor = Color3.fromRGB(0, 255, 0) -- hijau juga
+                            color = Color3.fromRGB(0, 255, 0)
+                            textColor = Color3.fromRGB(0, 255, 0)
                         end
 
                         createLockTimerESP(main, text, color, textColor)
@@ -832,7 +774,6 @@ toggleMap["ESP Lock Timer"].toggle = VisualTab:Toggle({
     end
 })
 toggleMap["ESP Lock Timer"].callback = toggleMap["ESP Lock Timer"].toggle.Callback
-
 --------------------------------------------------------------------
 -- Variabel
 --------------------------------------------------------------------
@@ -1095,6 +1036,9 @@ createBuyButton("Body Swap Potion", "Body Swap Potion")
 createBuyButton("Rainbowrarth Sword", "Rainbowrarth Sword")
 createBuyButton("Trap", "Trap")
 
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = game.Players.LocalPlayer
+
 local HopeServerTab = OtherSection:Tab({
     Title = "Hope Server",
     Icon = "server"
@@ -1130,92 +1074,14 @@ HopeServerTab:Button({
         end
         local placeId = game.PlaceId
         local success, err = pcall(function()
-            if isPrivate then
-                TeleportService:TeleportToPrivateServer(placeId, currentJobId, {LocalPlayer})
-            else
-                TeleportService:TeleportToPlaceInstance(placeId, currentJobId, LocalPlayer)
-            end
+            -- langsung teleport tanpa cek owner/private
+            TeleportService:TeleportToPlaceInstance(placeId, currentJobId, LocalPlayer)
         end)
         WindUI:Notify({
             Title = success and "Teleport" or "Teleport Error",
             Content = success and ("Teleporting to Job ID: " .. currentJobId) or ("Failed: " .. tostring(err)),
             Icon = "rbxassetid://114691672281339"
         })
-    end
-})
-
-HopeServerTab:Button({
-    Title = "Rejoin Current Server",
-    Desc = "Rejoins the current server",
-    Callback = function()
-        local success, err = pcall(function()
-            for _, conn in pairs(connections) do
-                if conn then
-                    if typeof(conn) == "thread" then
-                        task.cancel(conn)
-                    elseif typeof(conn) == "RBXScriptConnection" then
-                        conn:Disconnect()
-                    end
-                end
-            end
-            connections = {}
-            if ESPFolder then ESPFolder:Destroy() end
-            for _, obj in pairs(workspace:GetChildren()) do
-                local esp = obj:FindFirstChild("ESP")
-                if esp then esp:Destroy() end
-            end
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-        end)
-        WindUI:Notify({
-            Title = success and "Rejoin" or "Rejoin Error",
-            Content = success and "Rejoining current server" or ("Failed to rejoin: " .. tostring(err)),
-            Icon = "rbxassetid://114691672281339"
-        })
-    end
-})
-
-HopeServerTab:Button({
-    Title = "Copy Current Job ID",
-    Desc = "Copies the current Job ID to clipboard",
-    Callback = function()
-        local success, err = pcall(function()
-            if not setclipboard then error("setclipboard function not available") end
-            setclipboard(game.JobId)
-        end)
-        WindUI:Notify({
-            Title = success and "Copied" or "Copy Error",
-            Content = success and "Current Job ID copied to clipboard" or ("Failed to copy Job ID: " .. tostring(err)),
-            Icon = "rbxassetid://114691672281339"
-        })
-    end
-})
-
-HopeServerTab:Button({
-    Title = "Hope Server",
-    Desc = "Only Work On Public Server",
-    Callback = function()
-        HopeserverEnabled = not HopeserverEnabled
-        if HopeserverEnabled then
-            local success, err = pcall(function()
-                loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
-            end)
-            WindUI:Notify({
-                Title = "Hope Server",
-                Content = success and "Enabled" or ("Failed: " .. tostring(err)),
-                Icon = "rbxassetid://114691672281339"
-            })
-        else
-            if getgenv().TweenToBaseCleanup then
-                pcall(function()
-                    getgenv().TweenToBaseCleanup()
-                end)
-            end
-            WindUI:Notify({
-                Title = "Hope Server",
-                Content = "Disabled",
-                Icon = "rbxassetid://114691672281339"
-            })
-        end
     end
 })
 
