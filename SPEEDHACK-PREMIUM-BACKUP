@@ -1,0 +1,156 @@
+local player = game.Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- ===== Vars =====
+local enabled = true -- otomatis on
+local currentSpeed = 150
+local DEFAULT_SPEED = 16
+local character, humanoid, hrp
+local speedConnection, fakeFireLoop
+local itemID = "Grapple Hook"
+local useItemRE = ReplicatedStorage:WaitForChild("Packages")
+    :WaitForChild("Net")
+    :WaitForChild("RE/UseItem")
+
+-- ===== Minimal GUI =====
+local gui = Instance.new("ScreenGui")
+gui.Name = "WalvyCombinedGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 160, 0, 100)
+frame.Position = UDim2.new(0.5, -80, 0.5, -50)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BorderSizePixel = 0
+frame.AnchorPoint = Vector2.new(0.5,0.5)
+frame.Active = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,6)
+
+local title = Instance.new("TextLabel", frame)
+title.Text = "WALVY | Speed"
+title.Size = UDim2.new(1,0,0,20)
+title.Position = UDim2.new(0,0,0,5)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 12
+
+local toggleButton = Instance.new("TextButton", frame)
+toggleButton.Size = UDim2.new(0.8,0,0,28)
+toggleButton.Position = UDim2.new(0.1,0,0.4,0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(40,40,40)
+toggleButton.TextColor3 = Color3.fromRGB(255,255,255)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 11
+toggleButton.Text = enabled and "⏸ Off" or "▶ On"
+Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0,4)
+
+-- ===== Functions =====
+local function updateCharacter()
+    character = player.Character or player.CharacterAdded:Wait()
+    humanoid = character and character:WaitForChild("Humanoid", 5)
+    hrp = character and character:WaitForChild("HumanoidRootPart", 5)
+    if humanoid then humanoid.JumpPower = 50 end
+end
+
+local function startSpeedHack()
+    if speedConnection then speedConnection:Disconnect() speedConnection=nil end
+    if not enabled or not humanoid or not hrp then return end
+    speedConnection = RunService.Heartbeat:Connect(function()
+        if not enabled or not humanoid or not hrp then return end
+        local dir = humanoid.MoveDirection.Magnitude > 0 and humanoid.MoveDirection.Unit or Vector3.new(0,0,0)
+        hrp.AssemblyLinearVelocity = Vector3.new(dir.X*currentSpeed, hrp.AssemblyLinearVelocity.Y, dir.Z*currentSpeed)
+    end)
+end
+
+local function buyGrapple()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("Packages")
+            :WaitForChild("Net")
+            :WaitForChild("RF/CoinsShopService/RequestBuy")
+            :InvokeServer(itemID)
+    end)
+end
+
+local function autoEquip()
+    pcall(function()
+        local char = player.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if not (char and hum and hum.Health>0) then return end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool and tool.Name==itemID then return end
+        local backpack = player:WaitForChild("Backpack")
+        local t = backpack:FindFirstChild(itemID)
+        if t then hum:EquipTool(t) end
+    end)
+end
+
+local function fakeFire()
+    autoEquip()
+    local args = {1.9832406361897787}
+    pcall(function() useItemRE:FireServer(unpack(args)) end)
+end
+
+local function startFakeFireLoop()
+    if fakeFireLoop then fakeFireLoop:Disconnect() end
+    fakeFireLoop = RunService.Heartbeat:Connect(function() if enabled then fakeFire() end end)
+end
+
+local function stopAll()
+    if speedConnection then speedConnection:Disconnect() speedConnection=nil end
+    if humanoid then humanoid.WalkSpeed = DEFAULT_SPEED end
+    if fakeFireLoop then fakeFireLoop:Disconnect() fakeFireLoop=nil end
+end
+
+-- ===== Events =====
+toggleButton.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    updateCharacter()
+    if enabled then
+        toggleButton.Text = "⏸ Off"
+        startSpeedHack()
+        buyGrapple()
+        startFakeFireLoop()
+    else
+        toggleButton.Text = "▶ On"
+        stopAll()
+    end
+end)
+
+-- ===== Drag GUI =====
+local dragging, dragInput, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+        dragging=true
+        dragStart=input.Position
+        startPos=frame.Position
+        input.Changed:Connect(function() if input.UserInputState==Enum.UserInputState.End then dragging=false end end)
+    end
+end)
+frame.InputChanged:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then dragInput=input end end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input==dragInput then
+        local delta=input.Position - dragStart
+        frame.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,
+                                 startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+    end
+end)
+
+-- ===== Initial Setup =====
+updateCharacter()
+startSpeedHack()
+buyGrapple()
+startFakeFireLoop()
+
+-- ===== Respawn Handling =====
+player.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if enabled then
+        updateCharacter()
+        startSpeedHack()
+        startFakeFireLoop()
+    end
+end)
