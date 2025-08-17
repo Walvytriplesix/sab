@@ -133,7 +133,7 @@ local function loadMyScript()
     end
 
     local success, err = pcall(function()
-        local response = game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/SPEED%20HACCK%20WITH%20ENC")
+        local response = game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/Speedhack-Premium")
         if not response or response == "" then
             error("Empty response from HttpGet")
         end
