@@ -1,5 +1,3 @@
--- 🌪 WindUI + Player Utilities (Speed Hack, Infinity Jump, God Mode, Tween To Base)
-
 -- Memuat library WindUI
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 local HttpService = game:GetService("HttpService")
