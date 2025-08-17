@@ -125,7 +125,7 @@ local function loadMyScript()
         return false
     end
 
-    if playerGui:FindFirstChild("WalvyCombinedGUi") or getgenv().SpeedHackLoaded then
+    if playerGui:FindFirstChild("WalvyCombinedGUI") or getgenv().SpeedHackLoaded then
         isLoading = false
         return true
     end
@@ -172,7 +172,7 @@ local function cleanupMyScript()
     end
     local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
     if playerGui then
-        local gui = playerGui:FindFirstChild("WalvyCombinedGU")
+        local gui = playerGui:FindFirstChild("WalvyCombinedGUI")
         if gui then
             gui:Destroy()
         end
@@ -221,7 +221,7 @@ if WindUI and PlayerTab then
     local connection
     connection = RunService.Heartbeat:Connect(function()
         local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-        if playerGui and playerGui:FindFirstChild("WalvySpeedhackGui") and not getgenv().SpeedHackLoaded then
+        if playerGui and playerGui:FindFirstChild("WalvyCombinedGUI") and not getgenv().SpeedHackLoaded then
             myScriptEnabled = true
             toggleMap["Speedhackv1"].value = true
             if toggleMap["Speedhackv1"].toggle then
