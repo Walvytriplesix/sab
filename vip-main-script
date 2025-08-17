@@ -1243,34 +1243,26 @@ HopeServerTab:Button({
     end
 })
 
--- Tombol Rejoin Current Server
 HopeServerTab:Button({
     Title = "Rejoin Current Server",
     Desc = "Rejoins the current server",
     Callback = function()
         local success, err = pcall(function()
-            -- Cleanup connections
-            if connections then
-                for _, conn in pairs(connections) do
-                    if conn then
-                        if typeof(conn) == "thread" then
-                            task.cancel(conn)
-                        elseif typeof(conn) == "RBXScriptConnection" then
-                            conn:Disconnect()
-                        end
+            for _, conn in pairs(connections) do
+                if conn then
+                    if typeof(conn) == "thread" then
+                        task.cancel(conn)
+                    elseif typeof(conn) == "RBXScriptConnection" then
+                        conn:Disconnect()
                     end
                 end
-                connections = {}
             end
-            -- Hapus ESP
-            if ESPFolder and ESPFolder:IsA("Folder") then
-                ESPFolder:Destroy()
-            end
+            connections = {}
+            if ESPFolder then ESPFolder:Destroy() end
             for _, obj in pairs(workspace:GetChildren()) do
                 local esp = obj:FindFirstChild("ESP")
                 if esp then esp:Destroy() end
             end
-            -- Rejoin server
             TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
         end)
         WindUI:Notify({
@@ -1281,15 +1273,12 @@ HopeServerTab:Button({
     end
 })
 
--- Tombol Copy Current Job ID
 HopeServerTab:Button({
     Title = "Copy Current Job ID",
     Desc = "Copies the current Job ID to clipboard",
     Callback = function()
         local success, err = pcall(function()
-            if not setclipboard then
-                error("setclipboard function not available")
-            end
+            if not setclipboard then error("setclipboard function not available") end
             setclipboard(game.JobId)
         end)
         WindUI:Notify({
@@ -1300,22 +1289,25 @@ HopeServerTab:Button({
     end
 })
 
--- Tombol Hope Server (hanya public server)
 HopeServerTab:Button({
     Title = "Hope Server",
     Desc = "Only Work On Public Server",
     Callback = function()
         HopeserverEnabled = not HopeserverEnabled
         if HopeserverEnabled then
-            loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
+            end)
             WindUI:Notify({
                 Title = "Hope Server",
-                Content = "Enabled",
+                Content = success and "Enabled" or ("Failed: " .. tostring(err)),
                 Icon = "rbxassetid://114691672281339"
             })
         else
             if getgenv().TweenToBaseCleanup then
-                getgenv().TweenToBaseCleanup()
+                pcall(function()
+                    getgenv().TweenToBaseCleanup()
+                end)
             end
             WindUI:Notify({
                 Title = "Hope Server",
