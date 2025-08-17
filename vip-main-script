@@ -127,13 +127,13 @@ local function loadMyScript()
         return false
     end
 
-    if playerGui:FindFirstChild("WalvySpeedhackGui") or getgenv().SpeedHackLoaded then
+    if playerGui:FindFirstChild("WalvyCombinedGUi") or getgenv().SpeedHackLoaded then
         isLoading = false
         return true
     end
 
     local success, err = pcall(function()
-        local response = game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/Speedhack-Premium")
+        local response = game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/SPEEDHACK-PREMIUM-BACKUP")
         if not response or response == "" then
             error("Empty response from HttpGet")
         end
