@@ -369,7 +369,7 @@ end
 -- Tambahkan toggle ke WindUI
 toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
     Title = "Infinity Jump",
-    Desc = "Make Your Character Infinite Jump",
+    Desc = "Make Your Character Infinite Jump With AntiKick",
     Value = false,
     Callback = toggleInfinityJump
 })
