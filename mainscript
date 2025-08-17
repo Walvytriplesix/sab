@@ -271,8 +271,8 @@ local function loadInfinityJump()
         local humanoid
         local boosting = false
         local boostForce = 24
-        local boostFrames = 2
-        local boostCooldown = 0.12
+        local boostFrames = 1
+        local boostCooldown = 0.2
         local lastBoost = 0
 
         -- Fungsi BodyVelocity sementara
