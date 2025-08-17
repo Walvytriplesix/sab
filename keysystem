@@ -1,0 +1,147 @@
+-- Services
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Settings
+local ValidKeys = { "WALVY-91876", "WALVY-12345", "WALVY-ABCDE" }
+local KeyFile = "WalvyKeyData.json"
+local DiscordWebhook = "https://discord.com/api/webhooks/1406425008875765910/lTsfoPUI-WKucL9iMqvyEvruSdA3DF1CvUhB6GChg70JxFp0eacLbLxJag_aDca8PQz1"
+
+-- SCRIPT UTAMA LANGSUNG
+local mainScript = game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/refs/heads/main/vip-main-script")
+
+-- Fungsi cek key
+local function validateKey(key)
+    for _, k in pairs(ValidKeys) do
+        if key == k then
+            return true
+        end
+    end
+    return false
+end
+
+-- Fungsi simpan key + device
+local function saveKey(key)
+    if writefile then
+        local data = { 
+            key = key, 
+            userId = LocalPlayer.UserId
+        }
+        local encoded = HttpService:JSONEncode(data)
+        pcall(function()
+            writefile(KeyFile, encoded)
+        end)
+    end
+end
+
+-- Fungsi cek key tersimpan
+local function isKeyStoredValid()
+    if isfile and readfile and isfile(KeyFile) then
+        local content = readfile(KeyFile)
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(content)
+        end)
+        if success and data.key and data.userId then
+            return data.userId == LocalPlayer.UserId and validateKey(data.key)
+        end
+    end
+    return false
+end
+
+-- Fungsi kirim log ke Discord
+local function sendDiscordLog(key)
+    if DiscordWebhook then
+        local data = {
+            ["username"] = "Walvy VIP Logs",
+            ["embeds"] = {{
+
+                ["title"] = "Key VIP Digunakan!",
+                ["color"] = 16711680, -- merah
+                ["fields"] = {
+                    {["name"]="Username", ["value"]=LocalPlayer.Name, ["inline"]=true},
+                    {["name"]="UserId", ["value"]=tostring(LocalPlayer.UserId), ["inline"]=true},
+                    {["name"]="Key", ["value"]=key, ["inline"]=false},
+                    {["name"]="Waktu", ["value"]=os.date("%c"), ["inline"]=false}
+                }
+            }}
+        }
+        pcall(function()
+            HttpService:PostAsync(DiscordWebhook, HttpService:JSONEncode(data), Enum.HttpContentType.ApplicationJson)
+        end)
+    end
+end
+
+-- Jika key tersimpan valid, langsung load script utama
+if isKeyStoredValid() then
+    loadstring(mainScript)()
+    return
+end
+
+-- GUI
+local gui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+gui.Name = "WalvyKeyUI"
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 500, 0, 300)
+frame.Position = UDim2.new(0.5, -250, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BackgroundTransparency = 0.2
+frame.BorderSizePixel = 0
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 50)
+title.BackgroundTransparency = 1
+title.Text = "🔐 WALVY KEY SYSTEM"
+title.TextColor3 = Color3.fromRGB(255, 50, 50)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 24
+
+local textbox = Instance.new("TextBox", frame)
+textbox.PlaceholderText = "Masukkan Key Kamu"
+textbox.Size = UDim2.new(1, -40, 0, 50)
+textbox.Position = UDim2.new(0, 20, 0, 70)
+textbox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+textbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+textbox.Font = Enum.Font.Code
+textbox.TextSize = 20
+
+local status = Instance.new("TextLabel", frame)
+status.Size = UDim2.new(1, -40, 0, 30)
+status.Position = UDim2.new(0, 20, 0, 130)
+status.Text = "Masukkan key di atas."
+status.TextColor3 = Color3.fromRGB(255, 255, 255)
+status.Font = Enum.Font.Gotham
+status.TextSize = 16
+status.BackgroundTransparency = 1
+
+local enterBtn = Instance.new("TextButton", frame)
+enterBtn.Text = "ENTER KEY"
+enterBtn.Size = UDim2.new(0.96, 0, 0, 50)
+enterBtn.Position = UDim2.new(0.02, 0, 0, 180)
+enterBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+enterBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+enterBtn.Font = Enum.Font.GothamBold
+enterBtn.TextSize = 20
+
+local attempts = 0
+enterBtn.MouseButton1Click:Connect(function()
+    local input = textbox.Text
+    status.Text = "Memeriksa..."
+    if validateKey(input) then
+        saveKey(input)
+        sendDiscordLog(input)
+        status.Text = "✅ Key Valid! Membuka GUI..."
+        wait(0.5)
+        gui:Destroy()
+        loadstring(mainScript)()
+    else
+        attempts += 1
+        status.Text = "❌ Key Salah atau digunakan di device lain!"
+        if attempts >= 3 then
+            status.Text = "⛔ Terlalu banyak percobaan! Tunggu 5 detik..."
+            wait(5)
+            attempts = 0
+        end
+    end
+end)
