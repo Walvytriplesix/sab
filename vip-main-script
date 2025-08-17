@@ -172,7 +172,7 @@ local function cleanupMyScript()
     end
     local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
     if playerGui then
-        local gui = playerGui:FindFirstChild("WalvySpeedhackGui")
+        local gui = playerGui:FindFirstChild("WalvyCombinedGU")
         if gui then
             gui:Destroy()
         end
