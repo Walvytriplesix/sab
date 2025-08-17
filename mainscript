@@ -268,9 +268,9 @@ local function loadInfinityJump()
         local player = Players.LocalPlayer
         local humanoid
         local boosting = false
-        local boostForce = 24
+        local boostForce = 22
         local boostFrames = 2
-        local boostCooldown = 0.2
+        local boostCooldown = 0.12
         local lastBoost = 0
 
         -- Fungsi BodyVelocity sementara
