@@ -1,4 +1,4 @@
-task.wait(4)
+task.wait(3)
 
 -- Memuat library WindUI dengan penanganan kesalahan
 local WindUI
