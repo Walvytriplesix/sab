@@ -1,4 +1,4 @@
-task.wait(4)
+task.wait(3)
 
 -- Memuat library WindUI dengan penanganan kesalahan
 local WindUI
@@ -62,21 +62,21 @@ end
 -- Define toggle mapping for easier state management
 local toggleMap = {
     ["Speedhackv1"] = { var = "Speedhackv1", value = false, toggle = nil, callback = nil },
-    ["Infinity Jump"] = { var = "infinityJumpEnabled", value = false, toggle = nil, callback = nil },
-    ["God Mode"] = { var = "godOn", value = false, toggle = nil, callback = nil },
-    ["Anti Ragdoll"] = { var = "arOn", value = false, toggle = nil, callback = nil },
-    ["Brainrot ESP"] = { var = "brainrotESPEnabled", value = false, toggle = nil, callback = nil },
-    ["Player ESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
-    ["ESP Lock Timer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
-    ["Reminder Lock"] = { var = "lockReminderEnabled", value = false, toggle = nil, callback = nil },
-    ["Buy All Tools"] = { var = "buyAllToolsOnce", value = false, toggle = nil, callback = nil },
-    ["Buy Body Swap Potion"] = { var = "buyBodySwapOnce", value = false, toggle = nil, callback = nil },
-    ["Buy Rainbowrarth Sword"] = { var = "buyRainbowrarthOnce", value = false, toggle = nil, callback = nil },
-    ["Buy All Seeing Sentry"] = { var = "buyAllSeeingSentryOnce", value = false, toggle = nil, callback = nil },
-    ["Buy Invisibility Cloak"] = { var = "buyInvisibilityCloakOnce", value = false, toggle = nil, callback = nil },
-    ["Buy Quantum Cloner"] = { var = "buyQuantumClonerOnce", value = false, toggle = nil, callback = nil },
-    ["Buy Medusa's Head"] = { var = "buyMedusasHeadOnce", value = false, toggle = nil, callback = nil },
-    ["Buy Trap"] = { var = "buyTrapOnce", value = false, toggle = nil, callback = nil },
+    ["InfinityJump"] = { var = "infinityJumpEnabled", value = false, toggle = nil, callback = nil },
+    ["GodMode"] = { var = "godOn", value = false, toggle = nil, callback = nil },
+    ["AntiRagdoll"] = { var = "arOn", value = false, toggle = nil, callback = nil },
+    ["BrainrotESP"] = { var = "brainrotESPEnabled", value = false, toggle = nil, callback = nil },
+    ["PlayerESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
+    ["ESPLockTimer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
+    ["ReminderLock"] = { var = "lockReminderEnabled", value = false, toggle = nil, callback = nil },
+    ["BuyAllTools"] = { var = "buyAllToolsOnce", value = false, toggle = nil, callback = nil },
+    ["BuyBodySwapPotion"] = { var = "buyBodySwapOnce", value = false, toggle = nil, callback = nil },
+    ["BuyRainbowrarthSword"] = { var = "buyRainbowrarthOnce", value = false, toggle = nil, callback = nil },
+    ["BuyAllSeeingSentry"] = { var = "buyAllSeeingSentryOnce", value = false, toggle = nil, callback = nil },
+    ["BuyInvisibilityCloak"] = { var = "buyInvisibilityCloakOnce", value = false, toggle = nil, callback = nil },
+    ["BuyQuantumCloner"] = { var = "buyQuantumClonerOnce", value = false, toggle = nil, callback = nil },
+    ["BuyMedusasHead"] = { var = "buyMedusasHeadOnce", value = false, toggle = nil, callback = nil },
+    ["BuyTrap"] = { var = "buyTrapOnce", value = false, toggle = nil, callback = nil },
 }
 
 -- State variables
@@ -527,7 +527,7 @@ end
 
 local function toggleInfinityJump(state)
     infinityJumpEnabled = state
-    toggleMap["Infinity Jump"].value = state
+    toggleMap["InfinityJump"].value = state
     if state then
         loadInfinityJump()
         WindUI:Notify({
@@ -545,13 +545,13 @@ local function toggleInfinityJump(state)
     end
 end
 
-toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
+toggleMap["InfinityJump"].toggle = PlayerTab:Toggle({
     Title = "Infinity Jump",
     Desc = "Make Your Character Infinite Jump With AntiKick",
     Value = false,
     Callback = toggleInfinityJump
 })
-toggleMap["Infinity Jump"].callback = toggleInfinityJump
+toggleMap["InfinityJump"].callback = toggleInfinityJump
 
 -- God Mode
 local function applyGodMode()
@@ -574,13 +574,13 @@ local function applyGodMode()
     end
 end
 
-toggleMap["God Mode"].toggle = PlayerTab:Toggle({
+toggleMap["GodMode"].toggle = PlayerTab:Toggle({
     Title = "God Mode",
     Desc = "Make Your Character Cant Death.",
     Value = false,
     Callback = function(state)
         godOn = state
-        toggleMap["God Mode"].value = state
+        toggleMap["GodMode"].value = state
         if state then
             applyGodMode()
             if connections.godChar and connections.godChar.Connected then
@@ -610,7 +610,7 @@ toggleMap["God Mode"].toggle = PlayerTab:Toggle({
         end
     end
 })
-toggleMap["God Mode"].callback = toggleMap["God Mode"].toggle.Callback
+toggleMap["GodMode"].callback = toggleMap["GodMode"].toggle.Callback
 
 -- Anti Ragdoll
 local function liftAndFreeze(character)
@@ -652,13 +652,13 @@ local function monitorCharacter(character)
     end)
 end
 
-toggleMap["Anti Ragdoll"].toggle = PlayerTab:Toggle({
+toggleMap["AntiRagdoll"].toggle = PlayerTab:Toggle({
     Title = "Anti Ragdoll",
     Desc = "Freeze when affected by ragdoll or physics.",
     Value = false,
     Callback = function(state)
         arOn = state
-        toggleMap["Anti Ragdoll"].value = state
+        toggleMap["AntiRagdoll"].value = state
         local char = LocalPlayer.Character
         if state then
             if char then monitorCharacter(char) end
@@ -684,7 +684,7 @@ toggleMap["Anti Ragdoll"].toggle = PlayerTab:Toggle({
         end
     end
 })
-toggleMap["Anti Ragdoll"].callback = toggleMap["Anti Ragdoll"].toggle.Callback
+toggleMap["AntiRagdoll"].callback = toggleMap["AntiRagdoll"].toggle.Callback
 
 -- 🧍‍♂️ Visual Tab
 local VisualTab = MainSection:Tab({
@@ -853,13 +853,13 @@ local brainrotConnection = workspace.ChildAdded:Connect(function(child)
     if brainrotESPEnabled then createESP(child) end
 end)
 
-toggleMap["Brainrot ESP"].toggle = VisualTab:Toggle({
+toggleMap["BrainrotESP"].toggle = VisualTab:Toggle({
     Title = "Brainrot ESP",
     Desc = "Show ESP for Brainrot God & Secret Only",
     Value = false,
     Callback = function(state)
         brainrotESPEnabled = state
-        toggleMap["Brainrot ESP"].value = state
+        toggleMap["BrainrotESP"].value = state
         WindUI:Notify({
             Title = "Brainrot ESP",
             Content = state and "Enabled" or "Disabled",
@@ -877,7 +877,7 @@ toggleMap["Brainrot ESP"].toggle = VisualTab:Toggle({
         end
     end
 })
-toggleMap["Brainrot ESP"].callback = toggleMap["Brainrot ESP"].toggle.Callback
+toggleMap["BrainrotESP"].callback = toggleMap["BrainrotESP"].toggle.Callback
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "PlayerESP"
@@ -954,13 +954,13 @@ end)
 
 RunService.Heartbeat:Connect(UpdatePlayerESP)
 
-toggleMap["Player ESP"].toggle = VisualTab:Toggle({
+toggleMap["PlayerESP"].toggle = VisualTab:Toggle({
     Title = "Player ESP",
     Desc = "Show ESP for Other Players.",
     Value = false,
     Callback = function(state)
         playerESPEnabled = state
-        toggleMap["Player ESP"].value = state
+        toggleMap["PlayerESP"].value = state
         WindUI:Notify({
             Title = "Player ESP",
             Content = state and "Actived" or "NonActived",
@@ -971,7 +971,7 @@ toggleMap["Player ESP"].toggle = VisualTab:Toggle({
         end
     end
 })
-toggleMap["Player ESP"].callback = toggleMap["Player ESP"].toggle.Callback
+toggleMap["PlayerESP"].callback = toggleMap["PlayerESP"].toggle.Callback
 
 local activeLockTimerESPParts = {}
 local lastTimerValue = {}
@@ -1066,13 +1066,13 @@ connections.lockTimerESP = RunService.Heartbeat:Connect(function()
     end
 end)
 
-toggleMap["ESP Lock Timer"].toggle = VisualTab:Toggle({
+toggleMap["ESPLockTimer"].toggle = VisualTab:Toggle({
     Title = "ESP Lock Timer",
     Desc = "Show ESP Lock - Lock Base Timer.",
     Value = false,
     Callback = function(state)
         lockTimerESPEnabled = state
-        toggleMap["ESP Lock Timer"].value = state
+        toggleMap["ESPLockTimer"].value = state
         WindUI:Notify({
             Title = "ESP Lock Timer",
             Content = state and "Enabled" or "Disabled",
@@ -1080,7 +1080,7 @@ toggleMap["ESP Lock Timer"].toggle = VisualTab:Toggle({
         })
     end
 })
-toggleMap["ESP Lock Timer"].callback = toggleMap["ESP Lock Timer"].toggle.Callback
+toggleMap["ESPLockTimer"].callback = toggleMap["ESPLockTimer"].toggle.Callback
 
 local screenGui, label, alarm
 
@@ -1148,13 +1148,13 @@ local function getRemainingSeconds(plot)
     end
 end
 
-toggleMap["Reminder Lock"].toggle = VisualTab:Toggle({
+toggleMap["ReminderLock"].toggle = VisualTab:Toggle({
     Title = "Reminder Lock",
     Desc = "Reminder Lock Your Base When 10Sec.",
     Value = false,
     Callback = function(state)
         lockReminderEnabled = state
-        toggleMap["Reminder Lock"].value = state
+        toggleMap["ReminderLock"].value = state
         WindUI:Notify({
             Title = "Reminder Lock",
             Content = state and "Enabled" or "Disabled",
@@ -1168,7 +1168,7 @@ toggleMap["Reminder Lock"].toggle = VisualTab:Toggle({
         end
     end
 })
-toggleMap["Reminder Lock"].callback = toggleMap["Reminder Lock"].toggle.Callback
+toggleMap["ReminderLock"].callback = toggleMap["ReminderLock"].toggle.Callback
 
 task.spawn(function()
     while true do
@@ -1222,13 +1222,13 @@ local ShopTab = OtherSection:Tab({
 -- List semua tool yang ingin dibeli
 local toolsList = {"Invisibility Cloak", "Quantum Cloner", "Medusa's Head"}
 
-toggleMap["Buy All Tools"].toggle = ShopTab:Toggle({
+toggleMap["BuyAllTools"].toggle = ShopTab:Toggle({
     Title = "All Tools Stealing",
     Desc = "Buy All Stealing Tools like Invisibility Cloak, Quantum Cloner, Medusa's Head.",
     Value = false,
     Callback = function(state)
         buyAllToolsOnce = state
-        toggleMap["Buy All Tools"].value = state
+        toggleMap["BuyAllTools"].value = state
         if state then
             for _, tool in ipairs(toolsList) do
                 buyItem(tool)
@@ -1241,15 +1241,15 @@ toggleMap["Buy All Tools"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy All Tools"].callback = toggleMap["Buy All Tools"].toggle.Callback
+toggleMap["BuyAllTools"].callback = toggleMap["BuyAllTools"].toggle.Callback
 
-toggleMap["Buy Body Swap Potion"].toggle = ShopTab:Toggle({
+toggleMap["BuyBodySwapPotion"].toggle = ShopTab:Toggle({
     Title = "Body Swap Potion",
     Desc = "Buy Body Swap Potion once when enabled.",
     Value = false,
     Callback = function(state)
         buyBodySwapOnce = state
-        toggleMap["Buy Body Swap Potion"].value = state
+        toggleMap["BuyBodySwapPotion"].value = state
         if state then
             buyItem("Body Swap Potion")
             WindUI:Notify({
@@ -1260,15 +1260,15 @@ toggleMap["Buy Body Swap Potion"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy Body Swap Potion"].callback = toggleMap["Buy Body Swap Potion"].toggle.Callback
+toggleMap["BuyBodySwapPotion"].callback = toggleMap["BuyBodySwapPotion"].toggle.Callback
 
-toggleMap["Buy Rainbowrarth Sword"].toggle = ShopTab:Toggle({
+toggleMap["BuyRainbowrarthSword"].toggle = ShopTab:Toggle({
     Title = "Rainbowrarth Sword",
     Desc = "Buy Rainbowrarth Sword once when enabled.",
     Value = false,
     Callback = function(state)
         buyRainbowrarthOnce = state
-        toggleMap["Buy Rainbowrarth Sword"].value = state
+        toggleMap["BuyRainbowrarthSword"].value = state
         if state then
             buyItem("Rainbowrarth Sword")
             WindUI:Notify({
@@ -1279,15 +1279,15 @@ toggleMap["Buy Rainbowrarth Sword"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy Rainbowrarth Sword"].callback = toggleMap["Buy Rainbowrarth Sword"].toggle.Callback
+toggleMap["BuyRainbowrarthSword"].callback = toggleMap["BuyRainbowrarthSword"].toggle.Callback
 
-toggleMap["Buy All Seeing Sentry"].toggle = ShopTab:Toggle({
+toggleMap["BuyAllSeeingSentry"].toggle = ShopTab:Toggle({
     Title = "All Seeing Sentry",
     Desc = "Buy All Seeing Sentry once when enabled.",
     Value = false,
     Callback = function(state)
         buyAllSeeingSentryOnce = state
-        toggleMap["Buy All Seeing Sentry"].value = state
+        toggleMap["BuyAllSeeingSentry"].value = state
         if state then
             buyItem("All Seeing Sentry")
             WindUI:Notify({
@@ -1298,15 +1298,15 @@ toggleMap["Buy All Seeing Sentry"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy All Seeing Sentry"].callback = toggleMap["Buy All Seeing Sentry"].toggle.Callback
+toggleMap["BuyAllSeeingSentry"].callback = toggleMap["BuyAllSeeingSentry"].toggle.Callback
 
-toggleMap["Buy Invisibility Cloak"].toggle = ShopTab:Toggle({
+toggleMap["BuyInvisibilityCloak"].toggle = ShopTab:Toggle({
     Title = "Invisibility Cloak",
     Desc = "Buy Invisibility Cloak once when enabled.",
     Value = false,
     Callback = function(state)
         buyInvisibilityCloakOnce = state
-        toggleMap["Buy Invisibility Cloak"].value = state
+        toggleMap["BuyInvisibilityCloak"].value = state
         if state then
             buyItem("Invisibility Cloak")
             WindUI:Notify({
@@ -1317,15 +1317,15 @@ toggleMap["Buy Invisibility Cloak"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy Invisibility Cloak"].callback = toggleMap["Buy Invisibility Cloak"].toggle.Callback
+toggleMap["BuyInvisibilityCloak"].callback = toggleMap["BuyInvisibilityCloak"].toggle.Callback
 
-toggleMap["Buy Quantum Cloner"].toggle = ShopTab:Toggle({
+toggleMap["BuyQuantumCloner"].toggle = ShopTab:Toggle({
     Title = "Quantum Cloner",
     Desc = "Buy Quantum Cloner once when enabled.",
     Value = false,
     Callback = function(state)
         buyQuantumClonerOnce = state
-        toggleMap["Buy Quantum Cloner"].value = state
+        toggleMap["BuyQuantumCloner"].value = state
         if state then
             buyItem("Quantum Cloner")
             WindUI:Notify({
@@ -1336,15 +1336,15 @@ toggleMap["Buy Quantum Cloner"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy Quantum Cloner"].callback = toggleMap["Buy Quantum Cloner"].toggle.Callback
+toggleMap["BuyQuantumCloner"].callback = toggleMap["BuyQuantumCloner"].toggle.Callback
 
-toggleMap["Buy Medusa's Head"].toggle = ShopTab:Toggle({
+toggleMap["BuyMedusasHead"].toggle = ShopTab:Toggle({
     Title = "Medusa's Head",
     Desc = "Buy Medusa's Head once when enabled.",
     Value = false,
     Callback = function(state)
         buyMedusasHeadOnce = state
-        toggleMap["Buy Medusa's Head"].value = state
+        toggleMap["BuyMedusasHead"].value = state
         if state then
             buyItem("Medusa's Head")
             WindUI:Notify({
@@ -1355,15 +1355,15 @@ toggleMap["Buy Medusa's Head"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy Medusa's Head"].callback = toggleMap["Buy Medusa's Head"].toggle.Callback
+toggleMap["BuyMedusasHead"].callback = toggleMap["BuyMedusasHead"].toggle.Callback
 
-toggleMap["Buy Trap"].toggle = ShopTab:Toggle({
+toggleMap["BuyTrap"].toggle = ShopTab:Toggle({
     Title = "Buy Trap",
     Desc = "Buy Trap once when enabled.",
     Value = false,
     Callback = function(state)
         buyTrapOnce = state
-        toggleMap["Buy Trap"].value = state
+        toggleMap["BuyTrap"].value = state
         if state then
             buyItem("Trap")
             WindUI:Notify({
@@ -1374,7 +1374,7 @@ toggleMap["Buy Trap"].toggle = ShopTab:Toggle({
         end
     end
 })
-toggleMap["Buy Trap"].callback = toggleMap["Buy Trap"].toggle.Callback
+toggleMap["BuyTrap"].callback = toggleMap["BuyTrap"].toggle.Callback
 
 local HopeServerTab = OtherSection:Tab({
     Title = "Hope Server",
