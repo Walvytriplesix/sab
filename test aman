@@ -1,0 +1,1009 @@
+-- Memuat library WindUI dengan penanganan kesalahan
+local WindUI
+local success, result = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+if not success then
+    warn("Gagal memuat WindUI: " .. tostring(result))
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Error",
+        Text = "Gagal memuat WindUI. Periksa koneksi atau URL.",
+        Duration = 5
+    })
+    return
+else
+    WindUI = result
+end
+
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+-- Folder Config
+local CONFIG_FOLDER = "WalvyCommunityConfig"
+local configName = "default"
+local connections = {}
+
+-- Buat jendela GUI
+local Window = WindUI:CreateWindow({
+    Title = "Walvy Community",
+    Icon = "rbxassetid://114691672281339",
+    IconThemed = true,
+    Author = "VERSION: VIP",
+    Folder = CONFIG_FOLDER,
+    Size = UDim2.fromOffset(570, 480),
+    Theme = "Dark",
+    SideBarWidth = 170,
+    Transparent = false,
+    Center = true,
+    Draggable = true
+})
+
+-- Define toggle mapping for easier state management
+local toggleMap = {
+    ["Brainrot ESP"] = { var = "brainrotESPEnabled", value = false, toggle = nil, callback = nil },
+    ["Player ESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
+    ["ESP Lock Timer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
+    ["Reminder Lock"] = { var = "lockReminderEnabled", value = false, toggle = nil, callback = nil },
+    ["Tween To Base"] = { var = "tweenToBaseEnabled", value = false, toggle = nil, callback = nil },
+}
+
+-- State variables
+local brainrotESPEnabled = false
+local playerESPEnabled = false
+local lockTimerESPEnabled = false
+local lockReminderEnabled = false
+local tweenToBaseEnabled = false
+
+-- 📌 Section & Tab pertama: Info
+local MainSection = Window:Section({
+    Title = "Main Feature",
+    Icon = "package"
+})
+
+local InfoTab = MainSection:Tab({
+    Title = "Info",
+    Icon = "info",
+    Opened = true
+})
+
+InfoTab:Paragraph({
+    Title = "Welcome To Walvy Community",
+    Desc = "Game Version: Steal A Brainrot",
+    Image = "rbxassetid://114691672281339",
+    ImageSize = 40,
+    Thumbnail = "rbxassetid://85693098195372",
+    ThumbnailSize = 215
+})
+
+InfoTab:Paragraph({
+    Title = "Join Discord!",
+    Desc = "Click the button below to copy the invite link to our community."
+})
+
+local function safeSetClipboard(value)
+    if setclipboard and type(value) == "string" then
+        setclipboard(value)
+        return true
+    else
+        WindUI:Notify({
+            Title = "Clipboard Error",
+            Content = "Gagal menyalin ke clipboard: Fungsi tidak tersedia atau input tidak valid.",
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+end
+
+InfoTab:Button({
+    Title = "Join Our Discord",
+    Desc = "Click to copy our Discord link.",
+    Callback = function()
+        if safeSetClipboard("https://discord.gg/kWC8Nn7kne") then
+            WindUI:Notify({
+                Title = "Discord",
+                Content = "Link Discord berhasil disalin ke clipboard!",
+                Duration = 5
+            })
+        end
+    end
+})
+
+-- 🧍‍♂️ Tab Player (Empty)
+local PlayerTab = MainSection:Tab({
+    Title = "Player",
+    Icon = "user"
+})
+
+-- 🧍‍♂️ Visual Tab
+local VisualTab = MainSection:Tab({
+    Title = "Visual",
+    Icon = "eye"
+})
+
+local brainrotGodPrices = {
+    ["Cocofanto Elefanto"] = 10000, ["Girafa Celestre"] = 20000, ["Gattatino Neonino"] = 35000,
+    ["Matteo"] = 50000, ["Tralalero Tralala"] = 50000, ["Los Crocodillitos"] = 55000,
+    ["Espresso Signora"] = 70000, ["Odin Din Din Dun"] = 75000, ["Statutino Libertino"] = 75000,
+    ["Tukanno Bananno"] = 100000, ["Trenostruzzo Turbo 3000"] = 150000,
+    ["Trippi Troppi Troppa Trippa"] = 175000, ["Ballerino Lololo"] = 200000,
+    ["Los Tungtungtungcitos"] = 210000, ["Piccione Macchina"] = 225000,
+    ["Tigroligre Frutonni"] = 60000, ["Orcalero Orcala"] = 100000,
+    ["Bulbito Bandito Traktorito"] = 130000, ["Los Orcalitos"] = 235000
+}
+local brainrotSecretPrices = {
+    ["La Vacca Saturno Saturnita"] = 250000, ["Chimpanzini Spiderini"] = 325000,
+    ["Agarrini la Palini"] = 425000, ["Los Tralaleritos"] = 500000,
+    ["Las Tralaleritas"] = 650000, ["Las Vaquitas Saturnitas"] = 750000,
+    ["Graipuss Medussi"] = 1000000, ["Chicleteira Bicicleteira"] = 3500000,
+    ["La Grande Combinasion"] = 10000000, ["Los Combinasionas"] = 15000000,
+    ["Nuclearo Dinossauro"] = 15000000, ["Garama and Madundung"] = 50000000,
+    ["Dragon Cannelloni"] = 100000000, ["Torrtuginni Dragonfrutini"] = 350000,
+    ["Pot Hotspot"] = 2500000, ["Karkerkar Kurkur"] = 270000
+}
+local mutationMultipliers = {
+    ["Gold"] = 1.25, ["Diamond"] = 1.5, ["Rainbow"] = 10, ["Lava"] = 6, ["Bloodrot"] = 2,
+    ["Celestial"] = 4, ["Candy"] = 4, ["Rain"] = 4, ["Snow"] = 3, ["Concert"] = 5,
+    ["Nyan Cats"] = 6, ["4th of July"] = 6, ["Fire"] = 5, ["Crab Rave"] = 5,
+    ["Glitch"] = 5, ["Tung Tung Attack"] = 4, ["Raining Tacos"] = 3, ["Asteroid"] = 4,
+    ["10B Visits"] = 4, ["Starfall"] = 6
+}
+
+local brainrotGodWebhook = "https://discord.com/api/webhooks/1403020016923840643/NVDaViV5IWBCWTKx3EZA6N0rN9ZSyIPsi_7X3Yx6dVKLMga_esp4FjC5qvvQJLZpmApH"
+local brainrotSecretWebhook = "https://discord.com/api/webhooks/1403020144640397492/Y_097rV0AHxVOKMgJZBBR7A2gtndlYPAAk6AHmciirgwWBK4QPF5blZ0FXDR9W3MJkrc"
+
+local function getBrainrotType(name)
+    if brainrotGodPrices[name] then return "god" end
+    if brainrotSecretPrices[name] then return "secret" end
+    return nil
+end
+
+local function getColorByType(brainrotType)
+    if brainrotType == "god" then return Color3.fromRGB(0, 255, 0) end
+    if brainrotType == "secret" then return Color3.fromRGB(255, 0, 0) end
+    return Color3.fromRGB(255, 255, 255)
+end
+
+local function formatPrice(n)
+    if n >= 1e6 then return tostring(math.floor(n / 1e5) / 10) .. "M"
+    elseif n >= 1e3 then return tostring(math.floor(n / 1e2) / 10) .. "K"
+    else return tostring(n) end
+end
+
+local function sendWebhook(name, btype, price, jobId, placeId, mutation, players)
+    local webhookUrl = btype == "god" and brainrotGodWebhook or brainrotSecretWebhook
+    if not webhookUrl or webhookUrl == "" then return end
+    local now = os.date("!%Y-%m-%d %H:%M:%S")
+    local mobileScript = string.format('game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s")', placeId, jobId or "")
+    local joinLink = string.format("https://fern.wtf/joiner?placeId=%d&gameInstanceId=%s", placeId, jobId or "")
+    local embed = {
+        title = "🧠 New Pet Found - " .. (now or "Unknown Time"),
+        color = btype == "god" and 65280 or 16711680,
+        fields = {
+            { name = "Pets", value = tostring(name or "Unknown"), inline = true },
+            { name = "Players", value = tostring(players or 0), inline = true },
+            { name = "Script For mobile (click to copy):", value = "```lua\n" .. mobileScript .. "\n```" },
+            { name = "Join Link:", value = joinLink },
+            { name = "Job ID", value = tostring(jobId or "Unknown") }
+        }
+    }
+    local success, payload = pcall(function()
+        return HttpService:JSONEncode({ embeds = { embed } })
+    end)
+    if not success then
+        warn("Gagal mengenkode JSON untuk webhook: " .. tostring(payload))
+        return
+    end
+    local req = (syn and syn.request) or http_request or request
+    if req then
+        pcall(function()
+            req({
+                Url = webhookUrl,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = payload
+            })
+        end)
+    else
+        warn("Fungsi HTTP tidak tersedia untuk mengirim webhook.")
+    end
+end
+
+local function createESP(model)
+    if not model:IsA("Model") or model:FindFirstChild("ESP") then return end
+    local head = model:FindFirstChildWhichIsA("BasePart")
+    if not head then return end
+    local name = model.Name
+    local btype = getBrainrotType(name)
+    if not btype then return end
+    local basePrice = brainrotGodPrices[name] or brainrotSecretPrices[name]
+    if not basePrice then return end
+    local mutation = model:GetAttribute("Mutation")
+    local multiplier = mutation and mutationMultipliers[mutation] or 1
+    local finalPrice = math.floor(basePrice * multiplier)
+    local formattedPrice = formatPrice(finalPrice)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP"
+    highlight.Adornee = model
+    highlight.FillColor = getColorByType(btype)
+    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.FillTransparency = 0.4
+    highlight.OutlineTransparency = 0
+    highlight.Parent = model
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, 160, 0, 50)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = model
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.TextColor3 = getColorByType(btype)
+    text.TextStrokeTransparency = 0
+    text.TextScaled = true
+    text.Text = string.format("%s\n💰: %s/s | 🧪: %s", name, formattedPrice, mutation or "0")
+    text.Parent = billboard
+    if not model:GetAttribute("WebhookSent") then
+        model:SetAttribute("WebhookSent", true)
+        sendWebhook(name, btype, formattedPrice, game.JobId, game.PlaceId, mutation or "None", #Players:GetPlayers())
+    end
+    task.spawn(function()
+        while model and model.Parent and model:FindFirstChild("ESP") do
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character and model:IsDescendantOf(player.Character) then
+                    for _, v in ipairs(model:GetChildren()) do
+                        if v:IsA("Highlight") or v:IsA("BillboardGui") then
+                            v:Destroy()
+                        end
+                    end
+                    return
+                end
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+local function scanAllBrainrots()
+    for _, obj in pairs(workspace:GetChildren()) do
+        if brainrotESPEnabled then createESP(obj) end
+    end
+end
+
+local brainrotConnection = workspace.ChildAdded:Connect(function(child)
+    task.wait(0.2)
+    if brainrotESPEnabled then createESP(child) end
+end)
+
+toggleMap["Brainrot ESP"].toggle = VisualTab:Toggle({
+    Title = "Brainrot ESP",
+    Desc = "Show ESP for Brainrot God & Secret Only",
+    Value = false,
+    Callback = function(state)
+        brainrotESPEnabled = state
+        toggleMap["Brainrot ESP"].value = state
+        WindUI:Notify({
+            Title = "Brainrot ESP",
+            Content = state and "Enabled" or "Disabled",
+            Icon = "rbxassetid://114691672281339"
+        })
+        if state then
+            scanAllBrainrots()
+        else
+            for _, obj in pairs(workspace:GetChildren()) do
+                for _, v in ipairs(obj:GetChildren()) do
+                    if v:IsA("Highlight") and v.Name == "ESP" then v:Destroy() end
+                    if v:IsA("BillboardGui") and v.Name == "ESP" then v:Destroy() end
+                end
+            end
+        end
+    end
+})
+toggleMap["Brainrot ESP"].callback = toggleMap["Brainrot ESP"].toggle.Callback
+
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "PlayerESP"
+ESPFolder.Parent = CoreGui
+
+local function CreatePlayerESP(player)
+    if player == LocalPlayer or ESPFolder:FindFirstChild(player.Name) then return end
+    local character = player.Character
+    if not character or not character:FindFirstChild("Head") then return end
+    local container = Instance.new("Folder")
+    container.Name = player.Name
+    container.Parent = ESPFolder
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = character
+    highlight.FillColor = Color3.fromRGB(255, 255, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+    highlight.FillTransparency = 0.3
+    highlight.OutlineTransparency = 0
+    highlight.Parent = container
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "NameTag"
+    billboard.Adornee = character:FindFirstChild("Head")
+    billboard.Size = UDim2.new(0, 100, 0, 20)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = container
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextScaled = true
+    nameLabel.Parent = billboard
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local box = Instance.new("BoxHandleAdornment")
+            box.Name = "ESP_" .. part.Name
+            box.Adornee = part
+            box.Size = part.Size
+            box.AlwaysOnTop = true
+            box.ZIndex = 0
+            box.Color3 = Color3.fromRGB(255, 0, 0)
+            box.Transparency = 0.2
+            box.Parent = container
+        end
+    end
+end
+
+local function UpdatePlayerESP()
+    if not playerESPEnabled then
+        ESPFolder:ClearAllChildren()
+        return
+    end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            CreatePlayerESP(p)
+        end
+    end
+end
+
+Players.PlayerRemoving:Connect(function(player)
+    local esp = ESPFolder:FindFirstChild(player.Name)
+    if esp then esp:Destroy() end
+end)
+
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        task.wait(1)
+        if playerESPEnabled then CreatePlayerESP(p) end
+    end)
+end)
+
+RunService.Heartbeat:Connect(UpdatePlayerESP)
+
+toggleMap["Player ESP"].toggle = VisualTab:Toggle({
+    Title = "Player ESP",
+    Desc = "Show ESP for Other Players.",
+    Value = false,
+    Callback = function(state)
+        playerESPEnabled = state
+        toggleMap["Player ESP"].value = state
+        WindUI:Notify({
+            Title = "Player ESP",
+            Content = state and "Actived" or "NonActived",
+            Icon = "rbxassetid://114691672281339"
+        })
+        if not state then
+            ESPFolder:ClearAllChildren()
+        end
+    end
+})
+toggleMap["Player ESP"].callback = toggleMap["Player ESP"].toggle.Callback
+
+local activeLockTimerESPParts = {}
+local lastTimerValue = {}
+local lastTimerTick = {}
+
+local function clearLockTimerESP()
+    for _, esp in ipairs(activeLockTimerESPParts) do
+        if esp and esp.Parent then esp:Destroy() end
+    end
+    table.clear(activeLockTimerESPParts)
+end
+
+local function createLockTimerESP(targetPart, text, color, textColor)
+    if not targetPart or not targetPart:IsA("BasePart") then return end
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = color or Color3.fromRGB(255, 0, 0)
+    highlight.FillTransparency = 0.5
+    highlight.Adornee = targetPart
+    highlight.Parent = targetPart
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 100, 0, 30)
+    billboard.Adornee = targetPart
+    billboard.AlwaysOnTop = true
+    billboard.Name = "LockTimerESP"
+    billboard.Parent = targetPart
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = textColor or Color3.fromRGB(255, 255, 255)
+    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+    label.TextStrokeTransparency = 0
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+    label.Parent = billboard
+    table.insert(activeLockTimerESPParts, billboard)
+    table.insert(activeLockTimerESPParts, highlight)
+end
+
+connections.lockTimerESP = RunService.Heartbeat:Connect(function()
+    if not lockTimerESPEnabled then
+        clearLockTimerESP()
+        return
+    end
+    clearLockTimerESP()
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return end
+    for _, plot in ipairs(plots:GetChildren()) do
+        local plotBlock = plot:FindFirstChild("PlotBlock", true)
+        if plotBlock then
+            local main = plotBlock:FindFirstChild("Main")
+            if main and main:IsA("BasePart") then
+                local billboardGui = main:FindFirstChild("BillboardGui")
+                if billboardGui then
+                    local label = billboardGui:FindFirstChild("RemainingTime")
+                    if label and label:IsA("TextLabel") then
+                        local rawText = tostring(label.Text)
+                        local text = rawText
+                        local color = Color3.fromRGB(255, 0, 0)
+                        local textColor = Color3.fromRGB(255, 255, 255)
+                        local id = plot:GetDebugId()
+                        if lastTimerValue[id] ~= rawText then
+                            lastTimerValue[id] = rawText
+                            lastTimerTick[id] = tick()
+                        end
+                        local stuck = lastTimerTick[id] and (tick() - lastTimerTick[id] > 3)
+                        if rawText == "" 
+                            or rawText:match("^0+$") 
+                            or rawText:match("^0[%D]+0*$") 
+                            or stuck then
+                            text = "Unlock"
+                            color = Color3.fromRGB(0, 255, 0)
+                            textColor = Color3.fromRGB(0, 255, 0)
+                        end
+                        createLockTimerESP(main, text, color, textColor)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+toggleMap["ESP Lock Timer"].toggle = VisualTab:Toggle({
+    Title = "ESP Lock Timer",
+    Desc = "Show ESP Lock - Lock Base Timer.",
+    Value = false,
+    Callback = function(state)
+        lockTimerESPEnabled = state
+        toggleMap["ESP Lock Timer"].value = state
+        WindUI:Notify({
+            Title = "ESP Lock Timer",
+            Content = state and "Enabled" or "Disabled",
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+toggleMap["ESP Lock Timer"].callback = toggleMap["ESP Lock Timer"].toggle.Callback
+
+local screenGui, label, alarm
+
+local function createBaseStatusGUI()
+    if screenGui then screenGui:Destroy() end
+    if alarm then alarm:Destroy() end
+    screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BaseStatusGUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = CoreGui
+    label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 230, 0, 30)
+    label.Position = UDim2.new(1, -240, 1, -40)
+    label.BackgroundTransparency = 0.3
+    label.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 18
+    label.TextStrokeTransparency = 0.5
+    label.BorderSizePixel = 0
+    label.ZIndex = 9999
+    label.Text = ""
+    label.Parent = screenGui
+    alarm = Instance.new("Sound")
+    alarm.SoundId = "rbxassetid://2979857617"
+    alarm.Volume = 1.3
+    alarm.Looped = true
+    alarm.Parent = workspace
+end
+
+local function removeBaseStatusGUI()
+    if screenGui then
+        screenGui:Destroy()
+        screenGui = nil
+    end
+    if alarm then
+        alarm:Stop()
+        alarm:Destroy()
+        alarm = nil
+    end
+    label = nil
+end
+
+local function findMyPlot()
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return end
+    for _, plot in ipairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        if sign and sign:FindFirstChild("YourBase") and sign.YourBase.Enabled then
+            return plot
+        end
+    end
+end
+
+local function getRemainingSeconds(plot)
+    for _, obj in ipairs(plot:GetDescendants()) do
+        if obj:IsA("TextLabel") and obj.Name == "RemainingTime" and obj.Visible then
+            local seconds = tonumber(obj.Text:match("(%d+)"))
+            return seconds
+        end
+    end
+end
+
+toggleMap["Reminder Lock"].toggle = VisualTab:Toggle({
+    Title = "Reminder Lock",
+    Desc = "Reminder Lock Your Base When 10Sec.",
+    Value = false,
+    Callback = function(state)
+        lockReminderEnabled = state
+        toggleMap["Reminder Lock"].value = state
+        WindUI:Notify({
+            Title = "Reminder Lock",
+            Content = state and "Enabled" or "Disabled",
+            Icon = "rbxassetid://114691672281339"
+        })
+        if state then
+            createBaseStatusGUI()
+        else
+            removeBaseStatusGUI()
+        end
+    end
+})
+toggleMap["Reminder Lock"].callback = toggleMap["Reminder Lock"].toggle.Callback
+
+task.spawn(function()
+    while true do
+        if lockReminderEnabled and label then
+            local plot = findMyPlot()
+            if plot then
+                local remaining = getRemainingSeconds(plot)
+                if remaining then
+                    label.Text = "⏱️ Base Timer: " .. remaining .. "s"
+                    if remaining <= 10 then
+                        label.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        if not alarm.IsPlaying then
+                            alarm:Play()
+                        end
+                    else
+                        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        if alarm.IsPlaying then alarm:Stop() end
+                    end
+                else
+                    label.Text = "⛔ Base is Unlocked"
+                    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    TweenService:Create(label, TweenInfo.new(0.3), {
+                        BackgroundColor3 = Color3.fromRGB(50, 0, 0)
+                    }):Play()
+                    if alarm.IsPlaying then alarm:Stop() end
+                end
+            else
+                label.Text = "🔍 Searching for Base..."
+                label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                TweenService:Create(label, TweenInfo.new(0.3), {
+                    BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                }):Play()
+                if alarm.IsPlaying then alarm:Stop() end
+            end
+        end
+        task.wait(1)
+    end
+end)
+
+-- 📂 Other Section
+local OtherSection = Window:Section({
+    Title = "Other",
+    Icon = "boxes"
+})
+
+local StealingTab = OtherSection:Tab({
+    Title = "Stealing",
+    Icon = "hand"
+})
+
+local function loadTweenToBaseScript()
+    local success, err = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/script-tween-to-base-premium"))()
+    end)
+    if not success then
+        tweenToBaseEnabled = false
+        toggleMap["Tween To Base"].value = false
+        toggleMap["Tween To Base"].toggle:Set(false)
+        WindUI:Notify({
+            Title = "Tween To Base Error",
+            Content = "Gagal memuat skrip: " .. tostring(err),
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+    return true
+end
+
+local function cleanupTweenToBase()
+    if getgenv().TweenToBaseCleanup then
+        pcall(function()
+            getgenv().TweenToBaseCleanup()
+        end)
+    end
+    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if playerGui then
+        local gui = playerGui:FindFirstChild("WalvyWalkGui")
+        if gui then
+            gui:Destroy()
+        end
+    end
+end
+
+toggleMap["Tween To Base"].toggle = StealingTab:Toggle({
+    Title = "Tween To Base",
+    Desc = "Enable GUI Menu Stealing",
+    Value = false,
+    Callback = function(state)
+        tweenToBaseEnabled = state
+        toggleMap["Tween To Base"].value = state
+        if state then
+            if loadTweenToBaseScript() then
+                WindUI:Notify({
+                    Title = "Tween To Base",
+                    Content = "Enabled",
+                    Icon = "rbxassetid://114691672281339"
+                })
+            end
+        else
+            cleanupTweenToBase()
+            WindUI:Notify({
+                Title = "Tween To Base",
+                Content = "Disabled",
+                Icon = "rbxassetid://114691672281339"
+            })
+        end
+    end
+})
+toggleMap["Tween To Base"].callback = toggleMap["Tween To Base"].toggle.Callback
+
+local ShopTab = OtherSection:Tab({
+    Title = "Shop",
+    Icon = "shopping-cart"
+})
+
+local function buyAndEquipItem(itemName)
+    pcall(function()
+        ReplicatedStorage.Packages.Net["RF/CoinsShopService/RequestBuy"]:InvokeServer(itemName)
+        task.wait(0.1)
+        local backpack = LocalPlayer:WaitForChild("Backpack")
+        local tool = LocalPlayer.Character:FindFirstChild(itemName) or backpack:FindFirstChild(itemName)
+        if tool and tool.Parent ~= LocalPlayer.Character then
+            tool.Parent = LocalPlayer.Character
+        end
+    end)
+end
+
+ShopTab:Button({
+    Title = "Buy All Stealing Tools",
+    Desc = "Buy All Stealing Tools like Invisibility Cloak, Quantum Cloner, Medusa's Head, All Seeing Sentry",
+    Callback = function()
+        local stealTools = {
+            "Invisibility Cloak", "Quantum Cloner", "Medusa's Head", "All Seeing Sentry"
+        }
+        for _, toolName in ipairs(stealTools) do
+            buyAndEquipItem(toolName)
+            task.wait(0.5)
+        end
+        WindUI:Notify({
+            Title = "Tools Purchase",
+            Content = "All stealing tools have been purchased.",
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+local function createBuyButton(title, toolName)
+    ShopTab:Button({
+        Title = "Buy " .. title,
+        Desc = "Purchase " .. title,
+        Callback = function()
+            buyAndEquipItem(toolName)
+            task.wait(0.5)
+            WindUI:Notify({
+                Title = "Tools Purchase",
+                Content = title .. " has been purchased.",
+                Icon = "rbxassetid://114691672281339"
+            })
+        end
+    })
+end
+
+createBuyButton("Web Slinger", "Web Slinger")
+createBuyButton("Body Swap Potion", "Body Swap Potion")
+createBuyButton("Rainbowrarth Sword", "Rainbowrarth Sword")
+createBuyButton("Trap", "Trap")
+
+local HopeServerTab = OtherSection:Tab({
+    Title = "Hope Server",
+    Icon = "server"
+})
+
+local currentJobId = ""
+local HopeserverEnabled = false
+
+HopeServerTab:Input({
+    Title = "Job ID",
+    Placeholder = "Paste Job ID here",
+    Text = "",
+    Callback = function(text)
+        currentJobId = text
+        WindUI:Notify({
+            Title = "Job ID",
+            Content = "Job ID set to: " .. (text or "Unknown"),
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+HopeServerTab:Button({
+    Title = "Teleport to Job ID",
+    Desc = "Teleport to a specific Job ID",
+    Callback = function()
+        if currentJobId == "" then
+            return WindUI:Notify({
+                Title = "Error",
+                Content = "Please enter a valid Job ID",
+                Icon = "rbxassetid://114691672281339"
+            })
+        end
+        local placeId = game.PlaceId
+        local success, err = pcall(function()
+            TeleportService:TeleportToPlaceInstance(placeId, currentJobId, LocalPlayer)
+        end)
+        WindUI:Notify({
+            Title = success and "Teleport" or "Teleport Error",
+            Content = success and ("Teleporting to Job ID: " .. (currentJobId or "Unknown")) or ("Failed: " .. tostring(err or "Unknown error")),
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+HopeServerTab:Button({
+    Title = "Rejoin Current Server",
+    Desc = "Rejoins the current server",
+    Callback = function()
+        local success, err = pcall(function()
+            for _, conn in pairs(connections) do
+                if conn then
+                    if typeof(conn) == "thread" then
+                        task.cancel(conn)
+                    elseif typeof(conn) == "RBXScriptConnection" then
+                        conn:Disconnect()
+                    end
+                end
+            end
+            connections = {}
+            if ESPFolder then ESPFolder:Destroy() end
+            for _, obj in pairs(workspace:GetChildren()) do
+                local esp = obj:FindFirstChild("ESP")
+                if esp then esp:Destroy() end
+            end
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end)
+        WindUI:Notify({
+            Title = success and "Rejoin" or "Rejoin Error",
+            Content = success and "Rejoining current server" or ("Failed to rejoin: " .. tostring(err or "Unknown error")),
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+HopeServerTab:Button({
+    Title = "Copy Current Job ID",
+    Desc = "Copies the current Job ID to clipboard",
+    Callback = function()
+        local success, err = pcall(function()
+            if game.JobId and game.JobId ~= "" then
+                safeSetClipboard(game.JobId)
+            else
+                error("Job ID tidak tersedia")
+            end
+        end)
+        WindUI:Notify({
+            Title = success and "Copied" or "Copy Error",
+            Content = success and "Current Job ID copied to clipboard" or ("Failed to copy Job ID: " .. tostring(err or "Unknown error")),
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+HopeServerTab:Button({
+    Title = "Hope Server",
+    Desc = "Only Work On Public Server",
+    Callback = function()
+        HopeserverEnabled = not HopeserverEnabled
+        if HopeserverEnabled then
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
+            end)
+            WindUI:Notify({
+                Title = "Hope Server",
+                Content = success and "Enabled" or ("Failed: " .. tostring(err or "Unknown error")),
+                Icon = "rbxassetid://114691672281339"
+            })
+        else
+            if getgenv().TweenToBaseCleanup then
+                pcall(function()
+                    getgenv().TweenToBaseCleanup()
+                end)
+            end
+            WindUI:Notify({
+                Title = "Hope Server",
+                Content = "Disabled",
+                Icon = "rbxassetid://114691672281339"
+            })
+        end
+    end
+})
+
+-- 📂 Config Manager Section
+local ConfigSection = Window:Section({
+    Title = "Config Manager",
+    Icon = "settings"
+})
+
+local ConfigTab = ConfigSection:Tab({
+    Title = "Config",
+    Icon = "folder"
+})
+
+local function saveConfig()
+    local configData = {}
+    for name, data in pairs(toggleMap) do
+        configData[name] = data.value or false
+    end
+    if isfile and writefile then
+        if not isfolder(CONFIG_FOLDER) then
+            local success, err = pcall(function() makefolder(CONFIG_FOLDER) end)
+            if not success then
+                WindUI:Notify({
+                    Title = "Config Error",
+                    Content = "Failed to create config folder: " .. tostring(err or "Unknown error"),
+                    Icon = "alert-triangle"
+                })
+                return
+            end
+        end
+        local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
+        local success, err = pcall(function()
+            writefile(path, HttpService:JSONEncode(configData))
+        end)
+        WindUI:Notify({
+            Title = "Config",
+            Content = success and ("Config berhasil disimpan: " .. configName) or ("Failed to save config: " .. tostring(err or "Unknown error")),
+            Icon = success and "check" or "alert-triangle"
+        })
+    else
+        WindUI:Notify({
+            Title = "Config Error",
+            Content = "File system functions not available",
+            Icon = "alert-triangle"
+        })
+    end
+end
+
+local function loadConfig()
+    local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
+    if isfile and readfile and isfile(path) then
+        local success, decoded = pcall(function()
+            return HttpService:JSONDecode(readfile(path))
+        end)
+        if success then
+            for name, value in pairs(decoded) do
+                if toggleMap[name] and toggleMap[name].toggle then
+                    toggleMap[name].toggle:Set(value)
+                end
+            end
+            WindUI:Notify({
+                Title = "Config",
+                Content = "Config loaded successfully: " .. configName,
+                Icon = "check"
+            })
+        else
+            WindUI:Notify({
+                Title = "Config Error",
+                Content = "Failed to load config: " .. tostring(decoded or "Unknown error"),
+                Icon = "alert-triangle"
+            })
+        end
+    else
+        WindUI:Notify({
+            Title = "Config",
+            Content = "Config not found: " .. configName,
+            Icon = "alert-triangle"
+        })
+    end
+end
+
+ConfigTab:Input({
+    Title = "Config Name",
+    Placeholder = "Enter config name",
+    Default = configName,
+    Callback = function(value)
+        if value and type(value) == "string" and value ~= "" then
+            configName = value
+            WindUI:Notify({
+                Title = "Config",
+                Content = "Config name changed to: " .. configName,
+                Icon = "edit"
+            })
+        end
+    end
+})
+
+ConfigTab:Button({
+    Title = "Save Config",
+    Desc = "Save current settings.",
+    Callback = saveConfig
+})
+
+ConfigTab:Button({
+    Title = "Load Config",
+    Desc = "Load settings from file.",
+    Callback = loadConfig
+})
+
+-- ===== AUTO LOAD CONFIG =====
+task.spawn(function()
+    task.wait(0.1)
+    loadConfig()
+end)
+
+Window:SelectTab(1)
+
+game:BindToClose(function()
+    for _, conn in pairs(connections) do
+        if conn then
+            if typeof(conn) == "thread" then
+                task.cancel(conn)
+            elseif typeof(conn) == "RBXScriptConnection" then
+                conn:Disconnect()
+            end
+        end
+    end
+    if brainrotConnection and brainrotConnection.Connected then
+        brainrotConnection:Disconnect()
+    end
+    cleanupTweenToBase()
+    if ESPFolder then ESPFolder:Destroy() end
+    if screenGui then screenGui:Destroy() end
+    for _, obj in pairs(workspace:GetChildren()) do
+        local esp = obj:FindFirstChild("ESP")
+        if esp then esp:Destroy() end
+    end
+end)
