@@ -1219,47 +1219,6 @@ local ShopTab = OtherSection:Tab({
     Icon = "shopping-cart"
 })
 
-local toolsList = {"Invisibility Cloak", "Quantum Cloner", "Medusa's Head"}
-
-toggleMap["BuyAllTools"].toggle = ShopTab:Toggle({
-    Title = "All Tools Stealing",
-    Desc = "Buy All Stealing Tools like Invisibility Cloak, Quantum Cloner, Medusa's Head.",
-    Value = false,
-    Callback = function(state)
-        buyAllToolsOnce = state
-        toggleMap["BuyAllTools"].value = state
-
-        if state then
-            -- Loop setiap tool
-            for _, tool in ipairs(toolsList) do
-                -- Debug: tampilkan tool yang akan dibeli
-                print("Attempting to buy:", tool)
-                
-                -- Coba beli tool
-                local success, err = pcall(function()
-                    buyItem(tool)
-                end)
-
-                if success then
-                    print(tool .. " purchased successfully")
-                    WindUI:Notify({
-                        Title = "Buy Tool",
-                        Content = "Purchased: " .. tool,
-                        Icon = "rbxassetid://114691672281339"
-                    })
-                else
-                    warn("Failed to buy " .. tool .. ": " .. tostring(err))
-                end
-
-                -- Delay kecil agar server tidak menolak request
-                task.wait(0.5)
-            end
-        end
-    end
-})
-
-toggleMap["BuyAllTools"].callback = toggleMap["BuyAllTools"].toggle.Callback
-
 toggleMap["BuyBodySwapPotion"].toggle = ShopTab:Toggle({
     Title = "Body Swap Potion",
     Desc = "Buy Body Swap Potion once when enabled.",
