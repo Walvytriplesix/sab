@@ -1,4 +1,4 @@
-task.wait(4)
+task.wait(3)
 
 -- Memuat library WindUI dengan penanganan kesalahan
 local WindUI
@@ -1201,16 +1201,22 @@ local function buyAndEquipItem(itemName)
     end)
 end
 
+-- Daftar semua stealing tools
+local stealTools = {
+    "Invisibility Cloak",
+    "Quantum Cloner",
+    "Medusa's Head",
+    "All Seeing Sentry"
+}
+
+-- Tombol untuk membeli semua sekaligus
 ShopTab:Button({
     Title = "Buy All Stealing Tools",
-    Desc = "Buy All Stealing Tools like Invisibility Cloak, Quantum Cloner, Medusa's Head, All Seeing Sentry",
+    Desc = "Buy all stealing tools at once",
     Callback = function()
-        local stealTools = {
-            "Invisibility Cloak", "Quantum Cloner", "Medusa's Head", "All Seeing Sentry"
-        }
         for _, toolName in ipairs(stealTools) do
             buyAndEquipItem(toolName)
-            task.wait(0.5)
+            task.wait(0.5) -- jeda supaya server tidak menolak
         end
         WindUI:Notify({
             Title = "Tools Purchase",
@@ -1220,20 +1226,26 @@ ShopTab:Button({
     end
 })
 
-local function createBuyButton(title, toolName)
+-- Fungsi untuk membuat tombol per tool
+local function createBuyButton(toolName)
     ShopTab:Button({
-        Title = "Buy " .. title,
-        Desc = "Purchase " .. title,
+        Title = "Buy " .. toolName,
+        Desc = "Purchase " .. toolName,
         Callback = function()
             buyAndEquipItem(toolName)
             task.wait(0.5)
             WindUI:Notify({
                 Title = "Tools Purchase",
-                Content = title .. " has been purchased.",
+                Content = toolName .. " has been purchased.",
                 Icon = "rbxassetid://114691672281339"
             })
         end
     })
+end
+
+-- Membuat tombol untuk setiap tool
+for _, toolName in ipairs(stealTools) do
+    createBuyButton(toolName)
 end
 
 createBuyButton("Web Slinger", "Web Slinger")
