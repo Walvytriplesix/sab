@@ -1,4 +1,4 @@
-task.wait(3)
+task.wait(4)
 
 -- Memuat library WindUI dengan penanganan kesalahan
 local WindUI
@@ -69,7 +69,6 @@ local toggleMap = {
     ["PlayerESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
     ["ESPLockTimer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
     ["ReminderLock"] = { var = "lockReminderEnabled", value = false, toggle = nil, callback = nil },
-    ["BuyAllTools"] = { var = "buyAllToolsOnce", value = false, toggle = nil, callback = nil },
     ["BuyBodySwapPotion"] = { var = "buyBodySwapOnce", value = false, toggle = nil, callback = nil },
     ["BuyRainbowrarthSword"] = { var = "buyRainbowrarthOnce", value = false, toggle = nil, callback = nil },
     ["BuyAllSeeingSentry"] = { var = "buyAllSeeingSentryOnce", value = false, toggle = nil, callback = nil },
@@ -88,7 +87,6 @@ local playerESPEnabled = false
 local lockTimerESPEnabled = false
 local lockReminderEnabled = false
 local isFrozen = false
-local buyAllToolsOnce = false
 local buyBodySwapOnce = false
 local buyRainbowrarthOnce = false
 local buyAllSeeingSentryOnce = false
@@ -432,28 +430,19 @@ toggleMap["Speedhackv1"].toggle = PlayerTab:Toggle({
 })
 toggleMap["Speedhackv1"].callback = toggleMap["Speedhackv1"].toggle.Callback
 
--- Infinity Jump
-getgenv().InfinityJumpConnections = getgenv().InfinityJumpConnections or {}
-
-getgenv().InfinityJumpCleanup = function()
-    for _, conn in pairs(getgenv().InfinityJumpConnections) do
-        if conn.Connected then
-            conn:Disconnect()
-        end
-    end
-    getgenv().InfinityJumpConnections = {}
-    debugLog("Infinity Jump cleaned up")
-end
+-- 🚀 Infinity Jump Aman Universal (Android + PC, Anti-Kick + TPBack)
+local infinityJumpConnection
 
 local function loadInfinityJump()
     local success, err = pcall(function()
-        local player = LocalPlayer
+        local player = Players.LocalPlayer
         local humanoid
         local boosting = false
-        local boostForce = 22
-        local boostFrames = 2
-        local boostCooldown = 0.12
+        local boostForce = 45   -- Mendekati JumpPower default Roblox (~50)
+        local boostFrames = 1   -- Hanya sebentar (aman anti-kick)
+        local boostCooldown = 0.18 -- Delay antar jump, biar natural
         local lastBoost = 0
+        local safeY = 0
 
         local function applyBoost(root)
             if not root or boosting then return end
@@ -464,52 +453,58 @@ local function loadInfinityJump()
 
             local bv = Instance.new("BodyVelocity")
             bv.MaxForce = Vector3.new(0, math.huge, 0)
-            bv.P = 1250
             bv.Velocity = Vector3.new(root.Velocity.X, boostForce, root.Velocity.Z)
             bv.Parent = root
 
-            local frameCount = 0
+            local frames = 0
             local conn
             conn = RunService.Heartbeat:Connect(function()
-                if frameCount < boostFrames then
-                    frameCount += 1
-                    bv.Velocity = bv.Velocity + Vector3.new(0, 0.01, 0)
+                if frames < boostFrames then
+                    frames += 1
                 else
                     bv:Destroy()
                     conn:Disconnect()
                     boosting = false
                 end
             end)
-            table.insert(getgenv().InfinityJumpConnections, conn)
         end
 
-        local hbConn = RunService.Heartbeat:Connect(function()
+        local function isJumping()
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                return true
+            end
+            if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Jumping then
+                return true
+            end
+            return false
+        end
+
+        if infinityJumpConnection then infinityJumpConnection:Disconnect() end
+        infinityJumpConnection = RunService.Heartbeat:Connect(function()
+            if not infinityJumpEnabled then return end
             if humanoid and humanoid.Health > 0 then
                 local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
-                if root and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                    applyBoost(root)
-                end
-            end
-        end)
-        table.insert(getgenv().InfinityJumpConnections, hbConn)
-
-        local jrConn = UserInputService.JumpRequest:Connect(function()
-            if infinityJumpEnabled and humanoid and humanoid.Health > 0 then
-                local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
                 if root then
-                    applyBoost(root)
+                    if root.Position.Y > 3 then
+                        safeY = root.Position.Y
+                    end
+                    if root.Position.Y < -20 then
+                        root.CFrame = CFrame.new(root.Position.X, safeY + 5, root.Position.Z)
+                    end
+                    if isJumping() then
+                        applyBoost(root)
+                    end
                 end
             end
         end)
-        table.insert(getgenv().InfinityJumpConnections, jrConn)
-        
+
         local function onSpawn(char)
             humanoid = char:WaitForChild("Humanoid", 5)
             debugLog("Infinity Jump character spawned")
         end
 
         local charConn = player.CharacterAdded:Connect(onSpawn)
-        table.insert(getgenv().InfinityJumpConnections, charConn)
+        connections.infinityJumpChar = charConn
 
         if player.Character then
             onSpawn(player.Character)
@@ -536,7 +531,14 @@ local function toggleInfinityJump(state)
             Icon = "rbxassetid://114691672281339"
         })
     else
-        getgenv().InfinityJumpCleanup()
+        if infinityJumpConnection then
+            infinityJumpConnection:Disconnect()
+            infinityJumpConnection = nil
+        end
+        if connections.infinityJumpChar then
+            connections.infinityJumpChar:Disconnect()
+            connections.infinityJumpChar = nil
+        end
         WindUI:Notify({
             Title = "Infinity Jump",
             Content = "Disabled",
@@ -1613,7 +1615,9 @@ game:BindToClose(function()
     if brainrotConnection and brainrotConnection.Connected then
         brainrotConnection:Disconnect()
     end
-    getgenv().InfinityJumpCleanup()
+    if infinityJumpConnection then
+        infinityJumpConnection:Disconnect()
+    end
     if ESPFolder then ESPFolder:Destroy() end
     if screenGui then screenGui:Destroy() end
     if gui then gui:Destroy() end
