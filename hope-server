@@ -1,5 +1,5 @@
--- 🌐 WALVY SERVERHOP SCRIPT
--- langsung hop ke server publik lain dari game yang sama
+-- 🌐 WALVY SERVERHOP AUTO LOOP
+-- otomatis mencari server lain sampai berhasil teleport
 
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
@@ -8,7 +8,6 @@ local Players = game:GetService("Players")
 local PlaceID = game.PlaceId
 local JobID = game.JobId
 
--- ambil daftar server publik
 local function GetServers(cursor)
     local url = "https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100"
     if cursor then
@@ -18,20 +17,31 @@ local function GetServers(cursor)
     return HttpService:JSONDecode(response)
 end
 
-local found = false
-local cursor
-repeat
-    local servers = GetServers(cursor)
-    for _, server in pairs(servers.data) do
-        if server.playing < server.maxPlayers and server.id ~= JobID then
-            TeleportService:TeleportToPlaceInstance(PlaceID, server.id, Players.LocalPlayer)
-            found = true
-            break
-        end
-    end
-    cursor = servers.nextPageCursor
-until found or not cursor
+local function ServerHop()
+    local cursor
+    while true do
+        local success, servers = pcall(function()
+            return GetServers(cursor)
+        end)
 
-if not found then
-    warn("⚠️ Tidak ada server lain ditemukan, coba lagi nanti.")
+        if success and servers and servers.data then
+            for _, server in ipairs(servers.data) do
+                if server.playing < server.maxPlayers and server.id ~= JobID then
+                    print("🌍 Hopping ke server: " .. server.id)
+                    TeleportService:TeleportToPlaceInstance(PlaceID, server.id, Players.LocalPlayer)
+                    wait(5) -- tunggu sebentar, kalau gagal lanjut
+                end
+            end
+            cursor = servers.nextPageCursor
+            if not cursor then
+                cursor = nil -- reset biar balik ke halaman pertama
+            end
+        else
+            warn("⚠️ Gagal ambil daftar server, retry...")
+        end
+
+        task.wait(2) -- delay biar ga spam request
+    end
 end
+
+ServerHop()
