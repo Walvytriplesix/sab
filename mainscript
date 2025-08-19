@@ -1398,57 +1398,25 @@ HopeServerTab:Button({
 })
 
 HopeServerTab:Button({
-    Title = "Copy Current Job ID",
-    Desc = "Copies the current Job ID to clipboard",
-    Callback = function()
-        local jobId = game.JobId
-        if not jobId or jobId == "" then
-            WindUI:Notify({
-                Title = "Copy Error",
-                Content = "No valid Job ID available to copy",
-                Icon = "alert-triangle"
-            })
-            return
-        end
-        if safeSetClipboard(jobId) then
-            WindUI:Notify({
-                Title = "Copied",
-                Content = "Current Job ID copied to clipboard",
-                Icon = "rbxassetid://114691672281339"
-            })
-        end
-    end
-})
-
--- 🌐 WALVY COMMUNITY - HOPE SERVER TOGGLE
-
-local HopeServerTab = MainUI:Tab({
-    Title = "Hope Server",
-    Icon = "rbxassetid://114691672281339"
-})
-
-local HopeserverEnabled = false
-local HopeServerScriptURL = "https://raw.githubusercontent.com/Walvytriplesix/sab/main/hope-server" -- ganti link ini
-
-HopeServerTab:Button({
     Title = "Hope Server",
     Desc = "Only Work On Public Server",
     Callback = function()
         HopeserverEnabled = not HopeserverEnabled
         if HopeserverEnabled then
             local success, err = pcall(function()
-                local externalScript = game:HttpGet(HopeServerScriptURL)
-                local func = loadstring(externalScript)
-                if func then
-                    func()
-                else
-                    error("Failed to compile external script")
-                end
+                -- Temporarily disabled to isolate error
+                -- local externalScript = game:HttpGet("https://pastebin.com/raw/rV0w7pks")
+                -- local func = loadstring(externalScript)
+                -- if func then
+                --     func()
+                -- else
+                --     error("Failed to compile external script")
+                -- end
+                warn("Hope Server script loading is disabled for debugging. Please verify the external script.")
             end)
-
             WindUI:Notify({
                 Title = "Hope Server",
-                Content = success and "Enabled!" or ("Failed: " .. tostring(err or "Unknown error")),
+                Content = success and "Enabled (debug mode)" or ("Failed: " .. tostring(err or "Unknown error")),
                 Icon = "rbxassetid://114691672281339"
             })
         else
