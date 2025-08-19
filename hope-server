@@ -1,0 +1,37 @@
+-- 🌐 WALVY SERVERHOP SCRIPT
+-- langsung hop ke server publik lain dari game yang sama
+
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+
+local PlaceID = game.PlaceId
+local JobID = game.JobId
+
+-- ambil daftar server publik
+local function GetServers(cursor)
+    local url = "https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100"
+    if cursor then
+        url = url .. "&cursor=" .. cursor
+    end
+    local response = game:HttpGet(url)
+    return HttpService:JSONDecode(response)
+end
+
+local found = false
+local cursor
+repeat
+    local servers = GetServers(cursor)
+    for _, server in pairs(servers.data) do
+        if server.playing < server.maxPlayers and server.id ~= JobID then
+            TeleportService:TeleportToPlaceInstance(PlaceID, server.id, Players.LocalPlayer)
+            found = true
+            break
+        end
+    end
+    cursor = servers.nextPageCursor
+until found or not cursor
+
+if not found then
+    warn("⚠️ Tidak ada server lain ditemukan, coba lagi nanti.")
+end
