@@ -1397,29 +1397,42 @@ HopeServerTab:Button({
     end
 })
 
+-- Tombol Copy Current Job ID
+HopeServerTab:Button({
+    Title = "Copy Current Job ID",
+    Desc = "Copies the current Job ID to clipboard",
+    Callback = function()
+        local success, err = pcall(function()
+            if not setclipboard then
+                error("setclipboard function not available")
+            end
+            setclipboard(game.JobId)
+        end)
+        WindUI:Notify({
+            Title = success and "Copied" or "Copy Error",
+            Content = success and "Current Job ID copied to clipboard" or ("Failed to copy Job ID: " .. tostring(err)),
+            Icon = "rbxassetid://114691672281339"
+        })
+    end
+})
+
+-- Tombol Hope Server (hanya public server)
 HopeServerTab:Button({
     Title = "Hope Server",
     Desc = "Only Work On Public Server",
     Callback = function()
         HopeserverEnabled = not HopeserverEnabled
         if HopeserverEnabled then
-            local success, err = pcall(function()
-                -- Temporarily disabled to isolate error
-                -- local externalScript = game:HttpGet("https://pastebin.com/raw/rV0w7pks")
-                -- local func = loadstring(externalScript)
-                -- if func then
-                --     func()
-                -- else
-                --     error("Failed to compile external script")
-                -- end
-                warn("Hope Server script loading is disabled for debugging. Please verify the external script.")
-            end)
+            loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
             WindUI:Notify({
                 Title = "Hope Server",
-                Content = success and "Enabled (debug mode)" or ("Failed: " .. tostring(err or "Unknown error")),
+                Content = "Enabled",
                 Icon = "rbxassetid://114691672281339"
             })
         else
+            if getgenv().TweenToBaseCleanup then
+                getgenv().TweenToBaseCleanup()
+            end
             WindUI:Notify({
                 Title = "Hope Server",
                 Content = "Disabled",
