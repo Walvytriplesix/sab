@@ -1,55 +1,89 @@
--- Memuat library WindUI
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+task.wait(4)
+
+-- Memuat library WindUI dengan penanganan kesalahan
+local WindUI
+local success, result = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+if not success then
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Error",
+        Text = "Gagal memuat WindUI. Periksa koneksi atau URL.",
+        Duration = 5
+    })
+    return
+else
+    WindUI = result
+end
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
 -- Folder Config
 local CONFIG_FOLDER = "WalvyCommunityConfig"
 local configName = "default"
 local connections = {}
 
+-- Valid shop items to prevent invalid requests
+local validShopItems = {
+    "Body Swap Potion",
+    "Rainbowrarth Sword",
+    "All Seeing Sentry",
+    "Invisibility Cloak",
+    "Quantum Cloner",
+    "Medusa's Head",
+    "Trap",
+    "Grapple Hook"
+}
+
 -- Buat jendela GUI
-local Window = WindUI:CreateWindow({
-    Title = "Walvy Community",
-    Icon = "rbxassetid://114691672281339",
-    IconThemed = true,
-    Author = "VERSION: FREEMIUM",
-    Folder = CONFIG_FOLDER,
-    Size = UDim2.fromOffset(570, 480),
-    Theme = "Dark",
-    SideBarWidth = 170,
-    Transparent = false,
-    Center = true,
-    Draggable = true
-})
+local Window
+local success, err = pcall(function()
+    Window = WindUI:CreateWindow({
+        Title = "Walvy Community",
+        Icon = "rbxassetid://114691672281339",
+        IconThemed = true,
+        Author = "VERSION: VIP",
+        Folder = CONFIG_FOLDER,
+        Size = UDim2.fromOffset(570, 480),
+        Theme = "Dark",
+        SideBarWidth = 170,
+        Transparent = false,
+        Center = true,
+        Draggable = true
+    })
+end)
+if not success then
+    return
+end
 
 -- Define toggle mapping for easier state management
 local toggleMap = {
     ["Speedhackv1"] = { var = "Speedhackv1", value = false, toggle = nil, callback = nil },
-	["Infinity Jump"] = { var = "infinityJumpEnabled", value = false, toggle = nil, callback = nil },
-    ["God Mode"] = { var = "godOn", value = false, toggle = nil, callback = nil },
-    ["Anti Ragdoll"] = { var = "arOn", value = false, toggle = nil, callback = nil },
-    ["Brainrot ESP"] = { var = "brainrotESPEnabled", value = false, toggle = nil, callback = nil },
-    ["Player ESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
-    ["ESP Lock Timer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
-    ["Reminder Lock"] = { var = "lockReminderEnabled", value = false, toggle = nil, callback = nil },
-    ["Tween To Base"] = { var = "tweenToBaseEnabled", value = false, toggle = nil, callback = nil },
+    ["InfinityJump"] = { var = "infinityJumpEnabled", value = false, toggle = nil, callback = nil },
+    ["GodMode"] = { var = "godOn", value = false, toggle = nil, callback = nil },
+    ["AntiRagdoll"] = { var = "arOn", value = false, toggle = nil, callback = nil },
+    ["BrainrotESP"] = { var = "brainrotESPEnabled", value = false, toggle = nil, callback = nil },
+    ["PlayerESP"] = { var = "playerESPEnabled", value = false, toggle = nil, callback = nil },
+    ["ESPLockTimer"] = { var = "lockTimerESPEnabled", value = false, toggle = nil, callback = nil },
+    ["ReminderLock"] = { var = "lockReminderEnabled", value = false, toggle = nil, callback = nil }
 }
 
 -- State variables
-local Speedhackv1Enable = false
-local infinityJumpEnabled = false  -- baru
+local infinityJumpEnabled = false
 local godOn = false
 local arOn = false
 local brainrotESPEnabled = false
 local playerESPEnabled = false
 local lockTimerESPEnabled = false
 local lockReminderEnabled = false
-local tweenToBaseEnabled = false
 local isFrozen = false
 
 -- 📌 Section & Tab pertama: Info
@@ -78,16 +112,49 @@ InfoTab:Paragraph({
     Desc = "Click the button below to copy the invite link to our community."
 })
 
+local function safeSetClipboard(value)
+    if not setclipboard then
+        WindUI:Notify({
+            Title = "Clipboard Error",
+            Content = "Clipboard function is not available in this environment.",
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+    if value == nil or type(value) ~= "string" or value == "" then
+        WindUI:Notify({
+            Title = "Clipboard Error",
+            Content = "Invalid input: Expected a non-empty string.",
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+    local success, err = pcall(function()
+        setclipboard(value)
+    end)
+    if success then
+        return true
+    else
+        WindUI:Notify({
+            Title = "Clipboard Error",
+            Content = "Failed to copy to clipboard: " .. tostring(err or "Unknown error"),
+            Icon = "alert-triangle"
+        })
+        return false
+    end
+end
+
 InfoTab:Button({
     Title = "Join Our Discord",
     Desc = "Click to copy our Discord link.",
     Callback = function()
-        setclipboard("https://discord.gg/kWC8Nn7kne")
-        WindUI:Notify({
-            Title = "Discord",
-            Content = "Link Discord berhasil disalin ke clipboard!",
-            Duration = 5
-        })
+        if safeSetClipboard("https://discord.gg/kWC8Nn7kne") then
+            WindUI:Notify({
+                Title = "Discord",
+                Content = "Link Discord berhasil disalin ke clipboard!",
+                Duration = 5
+            })
+        end
     end
 })
 
@@ -97,175 +164,281 @@ local PlayerTab = MainSection:Tab({
     Icon = "user"
 })
 
--- ===== Services =====
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
--- ===== Vars =====
-local myScriptEnabled = false
-local isLoading = false -- Prevent concurrent loading
-local lastNotification = 0 -- Cooldown for notifications
-local NOTIFICATION_COOLDOWN = 5 -- Seconds between notifications
-
--- Pastikan toggleMap ada
-if not toggleMap then
-    toggleMap = {}
+-- ===== Speedhack + Grapple Hook =====
+local enabled = false
+local currentSpeed = 150
+local DEFAULT_SPEED = 16
+local itemID = "Grapple Hook"
+local useItemRE
+local success, result = pcall(function()
+    return ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RE/UseItem")
+end)
+if success then
+    useItemRE = result
+else
+    WindUI:Notify({
+        Title = "Error",
+        Content = "Failed to initialize Grapple Hook: UseItem not found.",
+        Icon = "alert-triangle"
+    })
 end
-toggleMap["Speedhackv1"] = {value = false, toggle = nil, callback = nil}
+local args = {1.9832406361897787}
+local character, humanoid, hrp
+local speedConnection, smoothLoop, equipLoop
+local gui, toggleButton, speedInput
 
--- ===== Fungsi Load Script =====
-local function loadMyScript()
-    if isLoading then return false end -- Prevent concurrent loading
-    isLoading = true
-
-    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    if not playerGui then
-        isLoading = false
-        return false
+local function updateCharacter()
+    if not LocalPlayer.Character then
+        LocalPlayer.CharacterAdded:Wait()
     end
+    character = LocalPlayer.Character
+    humanoid = character and character:WaitForChild("Humanoid", 5)
+    hrp = character and character:WaitForChild("HumanoidRootPart", 5)
+end
 
-    if playerGui:FindFirstChild("WalvySpeedhackGui") or getgenv().SpeedHackLoaded then
-        isLoading = false
-        return true
-    end
-
-    local success, err = pcall(function()
-        local response = game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/SPEED%20HACCK%20WITH%20ENC")
-        if not response or response == "" then
-            error("Empty response from HttpGet")
-        end
-        loadstring(response)()
-        getgenv().SpeedHackLoaded = true
+local function startSpeedHack()
+    if not humanoid or not hrp then return end
+    if speedConnection then speedConnection:Disconnect() end
+    speedConnection = RunService.Heartbeat:Connect(function()
+        if not enabled or not humanoid or not hrp then return end
+        local dir = humanoid.MoveDirection.Magnitude > 0 and humanoid.MoveDirection.Unit or Vector3.new()
+        hrp.AssemblyLinearVelocity = Vector3.new(dir.X * currentSpeed, hrp.AssemblyLinearVelocity.Y, dir.Z * currentSpeed)
     end)
-
-    if not success then
-        myScriptEnabled = false
-        toggleMap["Speedhackv1"].value = false
-        if toggleMap["Speedhackv1"].toggle then
-            pcall(function()
-                toggleMap["Speedhackv1"].toggle:Set(false)
-            end)
-        end
-        if WindUI and (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
-            WindUI:Notify({
-                Title = "Speed Hack",
-                Content = "Failed to load speed hack: " .. tostring(err),
-                Icon = "alert-triangle"
-            })
-            lastNotification = os.clock()
-        end
-        isLoading = false
-        return false
-    end
-
-    isLoading = false
-    return true
 end
 
--- ===== Fungsi Cleanup =====
-local function cleanupMyScript()
-    if getgenv().MyScriptCleanup then
-        pcall(function()
-            getgenv().MyScriptCleanup()
+local function stopSpeedHack()
+    if speedConnection then speedConnection:Disconnect() speedConnection = nil end
+end
+
+local function buyItem(itemName)
+    if not table.find(validShopItems, itemName) then
+        WindUI:Notify({
+            Title = "Purchase Error",
+            Content = "Invalid item name: " .. tostring(itemName),
+            Icon = "alert-triangle"
+        })
+        return
+    end
+    local requestBuy
+    local success, err = pcall(function()
+        requestBuy = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("Net"):WaitForChild("RF/CoinsShopService/RequestBuy")
+    end)
+    if not success or not requestBuy then
+        WindUI:Notify({
+            Title = "Purchase Error",
+            Content = "Shop service not found.",
+            Icon = "alert-triangle"
+        })
+        return
+    end
+    success, err = pcall(function()
+        requestBuy:InvokeServer(itemName)
+    end)
+    if not success then
+        WindUI:Notify({
+            Title = "Purchase Error",
+            Content = "Failed to buy " .. tostring(itemName) .. ": " .. tostring(err),
+            Icon = "alert-triangle"
+        })
+    end
+end
+
+local function autoEquip()
+    if not character then return end
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    local tool = character:FindFirstChild(itemID) or backpack:FindFirstChild(itemID)
+    if tool and tool.Parent ~= character then
+        tool.Parent = character
+    end
+end
+
+local function fakeUse()
+    if not character or not useItemRE then return end
+    local tool = character:FindFirstChild(itemID)
+    if tool then
+        local success, err = pcall(function()
+            useItemRE:FireServer(unpack(args))
         end)
     end
-    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    if playerGui then
-        local gui = playerGui:FindFirstChild("WalvySpeedhackGui")
-        if gui then
-            gui:Destroy()
-        end
-    end
-    getgenv().SpeedHackLoaded = nil
-    getgenv().MyScriptCleanup = nil
 end
 
--- ===== Tambahkan Toggle ke WindUI =====
-if WindUI and PlayerTab then
-    -- Pastikan toggle hanya dibuat sekali
-    if not toggleMap["Speedhackv1"].toggle then
-        toggleMap["Speedhackv1"].toggle = PlayerTab:Toggle({
-            Title = "Speed Hack",
-            Desc = "You Need Rebirth 4 To Use",
-            Value = false,
-            Callback = function(state)
-                myScriptEnabled = state
-                toggleMap["Speedhackv1"].value = state
-                if state then
-                    if loadMyScript() and (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
-                        WindUI:Notify({
-                            Title = "Speed Hack",
-                            Content = "Enabled",
-                            Icon = "rbxassetid://114691672281339"
-                        })
-                        lastNotification = os.clock()
-                    end
-                else
-                    cleanupMyScript()
-                    if (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
-                        WindUI:Notify({
-                            Title = "Speed Hack",
-                            Content = "Disabled",
-                            Icon = "rbxassetid://114691672281339"
-                        })
-                        lastNotification = os.clock()
-                    end
-                end
-            end
-        })
-        toggleMap["Speedhackv1"].callback = toggleMap["Speedhackv1"].toggle.Callback
+local function ensureGrapple()
+    if not character then return end
+    if not character:FindFirstChild(itemID) and not LocalPlayer.Backpack:FindFirstChild(itemID) then
+        buyItem(itemID)
     end
+    autoEquip()
+end
 
-    -- ===== Cek GUI hanya sekali saat load =====
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-        if playerGui and playerGui:FindFirstChild("WalvySpeedhackGui") and not getgenv().SpeedHackLoaded then
-            myScriptEnabled = true
-            toggleMap["Speedhackv1"].value = true
-            if toggleMap["Speedhackv1"].toggle then
-                pcall(function()
-                    toggleMap["Speedhackv1"].toggle:Set(true)
-                end)
-            end
-            loadMyScript()
-            if WindUI and (os.clock() - lastNotification) >= NOTIFICATION_COOLDOWN then
-                WindUI:Notify({
-                    Title = "Speed Hack",
-                    Content = "Automatically Enabled",
-                    Icon = "rbxassetid://114691672281339"
-                })
-                lastNotification = os.clock()
-            end
-            connection:Disconnect() -- Hentikan loop setelah GUI ditemukan
+local function startSmoothLoop()
+    if smoothLoop then smoothLoop:Disconnect() end
+    smoothLoop = RunService.RenderStepped:Connect(function()
+        if enabled then fakeUse() end
+    end)
+end
+
+local function startEquipLoop()
+    if equipLoop then equipLoop:Disconnect() end
+    equipLoop = RunService.Heartbeat:Connect(function()
+        if enabled then ensureGrapple() end
+    end)
+end
+
+local function createSpeedGUI()
+    if gui then gui:Destroy() gui = nil end
+    gui = Instance.new("ScreenGui")
+    gui.Name = "WalvySpeedGrappleGUI"
+    gui.ResetOnSpawn = false
+    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.new(0, 200, 0, 130)
+    frame.Position = UDim2.new(0.5, -100, 0.5, -65)
+    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    frame.BorderSizePixel = 0
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Active = true
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local title = Instance.new("TextLabel", frame)
+    title.Text = "WALVY COMMUNITY\nSeed Hack"
+    title.Size = UDim2.new(1, 0, 0, 35)
+    title.Position = UDim2.new(0, 0, 0, 5)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 12
+
+    toggleButton = Instance.new("TextButton", frame)
+    toggleButton.Text = enabled and "⏸ Turn Off" or "▶ Turn On"
+    toggleButton.Size = UDim2.new(0.8, 0, 0, 30)
+    toggleButton.Position = UDim2.new(0.1, 0, 0.40, 0)
+    toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleButton.Font = Enum.Font.GothamBold
+    toggleButton.TextSize = 12
+    Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(0, 6)
+
+    speedInput = Instance.new("TextBox", frame)
+    speedInput.Size = UDim2.new(0.8, 0, 0, 25)
+    speedInput.Position = UDim2.new(0.1, 0, 0.70, 0)
+    speedInput.PlaceholderText = "Set speed (40-1000)"
+    speedInput.ClearTextOnFocus = false
+    speedInput.Text = tostring(currentSpeed)
+    speedInput.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    speedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedInput.Font = Enum.Font.Gotham
+    speedInput.TextSize = 11
+    Instance.new("UICorner", speedInput).CornerRadius = UDim.new(0, 5)
+
+    toggleButton.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        toggleButton.Text = enabled and "⏸ Turn Off" or "▶ Turn On"
+        toggleMap["Speedhackv1"].value = enabled
+        updateCharacter()
+        if enabled then
+            startSpeedHack()
+            buyItem(itemID)
+            autoEquip()
+            startSmoothLoop()
+            startEquipLoop()
+        else
+            if humanoid then humanoid.WalkSpeed = DEFAULT_SPEED end
+            stopSpeedHack()
+            if smoothLoop then smoothLoop:Disconnect() smoothLoop = nil end
+            if equipLoop then equipLoop:Disconnect() equipLoop = nil end
+        end
+    end)
+
+    speedInput:GetPropertyChangedSignal("Text"):Connect(function()
+        local val = tonumber(speedInput.Text)
+        if val then
+            currentSpeed = math.clamp(val, 40, 1000)
+            speedInput.Text = tostring(currentSpeed)
+        else
+            speedInput.Text = tostring(currentSpeed)
+        end
+    end)
+
+    local dragging, dragInput, dragStart, startPos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 end
 
--- Toggle state
-local infinityJumpEnabled = false
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.4)
+    updateCharacter()
+    if enabled then
+        startSpeedHack()
+        buyItem(itemID)
+        autoEquip()
+    end
+end)
 
--- Global table untuk koneksi
+toggleMap["Speedhackv1"].toggle = PlayerTab:Toggle({
+    Title = "Speedhack",
+    Desc = "Need Rebirth 4 To Use This",
+    Value = false,
+    Callback = function(state)
+        toggleMap["Speedhackv1"].value = state
+        enabled = state
+        if state then
+            createSpeedGUI()
+            updateCharacter()
+            startSpeedHack()
+            buyItem(itemID)
+            autoEquip()
+            startSmoothLoop()
+            startEquipLoop()
+        else
+            if gui then
+                gui:Destroy()
+                gui = nil
+            end
+            if humanoid then humanoid.WalkSpeed = DEFAULT_SPEED end
+            stopSpeedHack()
+            if smoothLoop then smoothLoop:Disconnect() smoothLoop = nil end
+            if equipLoop then equipLoop:Disconnect() equipLoop = nil end
+        end
+    end
+})
+toggleMap["Speedhackv1"].callback = toggleMap["Speedhackv1"].toggle.Callback
+
+-- Infinity Jump
 getgenv().InfinityJumpConnections = getgenv().InfinityJumpConnections or {}
 
--- Cleanup function
 getgenv().InfinityJumpCleanup = function()
     for _, conn in pairs(getgenv().InfinityJumpConnections) do
-        if conn.Connected then
+        if conn and conn.Connected then
             conn:Disconnect()
         end
     end
     getgenv().InfinityJumpConnections = {}
 end
 
--- Fungsi untuk load Infinity Jump
 local function loadInfinityJump()
     local success, err = pcall(function()
-        local Players = game:GetService("Players")
-        local RunService = game:GetService("RunService")
-        local UserInputService = game:GetService("UserInputService")
-        local player = Players.LocalPlayer
+        local player = LocalPlayer
         local humanoid
         local boosting = false
         local boostForce = 22
@@ -273,7 +446,6 @@ local function loadInfinityJump()
         local boostCooldown = 0.12
         local lastBoost = 0
 
-        -- Fungsi BodyVelocity sementara
         local function applyBoost(root)
             if not root or boosting then return end
             local now = tick()
@@ -302,10 +474,9 @@ local function loadInfinityJump()
             table.insert(getgenv().InfinityJumpConnections, conn)
         end
 
-        -- Heartbeat loop utama
         local hbConn = RunService.Heartbeat:Connect(function()
             if humanoid and humanoid.Health > 0 then
-                local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+                local root = humanoid.Parent and humanoid.Parent:FindFirstChild("HumanoidRootPart")
                 if root and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                     applyBoost(root)
                 end
@@ -313,10 +484,9 @@ local function loadInfinityJump()
         end)
         table.insert(getgenv().InfinityJumpConnections, hbConn)
 
-        -- Event JumpRequest (Android Jump Button + PC juga jalan)
         local jrConn = UserInputService.JumpRequest:Connect(function()
             if infinityJumpEnabled and humanoid and humanoid.Health > 0 then
-                local root = humanoid.Parent:FindFirstChild("HumanoidRootPart")
+                local root = humanoid.Parent and humanoid.Parent:FindFirstChild("HumanoidRootPart")
                 if root then
                     applyBoost(root)
                 end
@@ -324,9 +494,8 @@ local function loadInfinityJump()
         end)
         table.insert(getgenv().InfinityJumpConnections, jrConn)
         
-        -- Hook CharacterAdded
         local function onSpawn(char)
-            humanoid = char:WaitForChild("Humanoid", 5)
+            humanoid = char and char:WaitForChild("Humanoid", 5)
         end
 
         local charConn = player.CharacterAdded:Connect(onSpawn)
@@ -337,18 +506,17 @@ local function loadInfinityJump()
         end
     end)
     if not success then
-        warn("Failed to load Infinity Jump:", err)
         WindUI:Notify({
             Title = "Infinity Jump",
-            Content = "Failed to load: "..tostring(err),
+            Content = "Failed to load: " .. tostring(err),
             Icon = "alert-triangle"
         })
     end
 end
 
--- Fungsi toggle
 local function toggleInfinityJump(state)
     infinityJumpEnabled = state
+    toggleMap["InfinityJump"].value = state
     if state then
         loadInfinityJump()
         WindUI:Notify({
@@ -366,26 +534,46 @@ local function toggleInfinityJump(state)
     end
 end
 
--- Tambahkan toggle ke WindUI
-toggleMap["Infinity Jump"].toggle = PlayerTab:Toggle({
+toggleMap["InfinityJump"].toggle = PlayerTab:Toggle({
     Title = "Infinity Jump",
     Desc = "Make Your Character Infinite Jump With AntiKick",
     Value = false,
     Callback = toggleInfinityJump
 })
-toggleMap["Infinity Jump"].callback = toggleMap["Infinity Jump"].toggle.Callback
-toggleMap["Infinity Jump"].value = false
+toggleMap["InfinityJump"].callback = toggleInfinityJump
 
-toggleMap["God Mode"].toggle = PlayerTab:Toggle({
+-- God Mode
+local function applyGodMode()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChild("Humanoid")
+    if not humanoid then
+        return
+    end
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    if connections.god and connections.god.Connected then
+        connections.god:Disconnect()
+    end
+    connections.god = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        if godOn and humanoid.Health < math.huge then
+            humanoid.Health = math.huge
+        end
+    end)
+end
+
+toggleMap["GodMode"].toggle = PlayerTab:Toggle({
     Title = "God Mode",
     Desc = "Make Your Character Cant Death.",
     Value = false,
     Callback = function(state)
         godOn = state
-        toggleMap["God Mode"].value = state
+        toggleMap["GodMode"].value = state
         if state then
             applyGodMode()
-            if connections.godChar then connections.godChar:Disconnect() end
+            if connections.godChar and connections.godChar.Connected then
+                connections.godChar:Disconnect()
+            end
             connections.godChar = LocalPlayer.CharacterAdded:Connect(function()
                 task.wait(1)
                 if godOn then applyGodMode() end
@@ -396,8 +584,12 @@ toggleMap["God Mode"].toggle = PlayerTab:Toggle({
                 Icon = "rbxassetid://114691672281339"
             })
         else
-            if connections.god then connections.god:Disconnect() end
-            if connections.godChar then connections.godChar:Disconnect() end
+            if connections.god and connections.god.Connected then
+                connections.god:Disconnect()
+            end
+            if connections.godChar and connections.godChar.Connected then
+                connections.godChar:Disconnect()
+            end
             WindUI:Notify({
                 Title = "God Mode",
                 Content = "Disabled",
@@ -406,10 +598,12 @@ toggleMap["God Mode"].toggle = PlayerTab:Toggle({
         end
     end
 })
-toggleMap["God Mode"].callback = toggleMap["God Mode"].toggle.Callback
+toggleMap["GodMode"].callback = toggleMap["GodMode"].toggle.Callback
 
+-- Anti Ragdoll
 local function liftAndFreeze(character)
-    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
     if hrp and not isFrozen then
         isFrozen = true
         hrp.CFrame = hrp.CFrame + Vector3.new(0, 1, 0)
@@ -420,7 +614,8 @@ local function liftAndFreeze(character)
 end
 
 local function unfreeze(character)
-    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
     if hrp and isFrozen then
         hrp.Anchored = false
         isFrozen = false
@@ -428,10 +623,13 @@ local function unfreeze(character)
 end
 
 local function monitorCharacter(character)
-    local humanoid = character and character:WaitForChild("Humanoid", 5)
-    local hrp = character and character:WaitForChild("HumanoidRootPart", 5)
-    if not humanoid or not hrp then return end
-    if connections.ragdoll then connections.ragdoll:Disconnect() end
+    if not character then return end
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    local hrp = character:WaitForChild("HumanoidRootPart", 5)
+    if not humanoid or not hrp then
+        return
+    end
+    if connections.ragdoll and connections.ragdoll.Connected then connections.ragdoll:Disconnect() end
     connections.ragdoll = RunService.Heartbeat:Connect(function()
         if not arOn then return end
         local state = humanoid:GetState()
@@ -445,16 +643,17 @@ local function monitorCharacter(character)
     end)
 end
 
-toggleMap["Anti Ragdoll"].toggle = PlayerTab:Toggle({
+toggleMap["AntiRagdoll"].toggle = PlayerTab:Toggle({
     Title = "Anti Ragdoll",
     Desc = "Freeze when affected by ragdoll or physics.",
     Value = false,
     Callback = function(state)
         arOn = state
-        toggleMap["Anti Ragdoll"].value = state
+        toggleMap["AntiRagdoll"].value = state
         local char = LocalPlayer.Character
         if state then
             if char then monitorCharacter(char) end
+            if connections.ragdollChar and connections.ragdollChar.Connected then connections.ragdollChar:Disconnect() end
             connections.ragdollChar = LocalPlayer.CharacterAdded:Connect(function(newChar)
                 task.wait(1)
                 if arOn then monitorCharacter(newChar) end
@@ -465,8 +664,8 @@ toggleMap["Anti Ragdoll"].toggle = PlayerTab:Toggle({
                 Icon = "rbxassetid://114691672281339"
             })
         else
-            if connections.ragdoll then connections.ragdoll:Disconnect() end
-            if connections.ragdollChar then connections.ragdollChar:Disconnect() end
+            if connections.ragdoll and connections.ragdoll.Connected then connections.ragdoll:Disconnect() end
+            if connections.ragdollChar and connections.ragdollChar.Connected then connections.ragdollChar:Disconnect() end
             if char then unfreeze(char) end
             WindUI:Notify({
                 Title = "Anti Ragdoll",
@@ -476,7 +675,7 @@ toggleMap["Anti Ragdoll"].toggle = PlayerTab:Toggle({
         end
     end
 })
-toggleMap["Anti Ragdoll"].callback = toggleMap["Anti Ragdoll"].toggle.Callback
+toggleMap["AntiRagdoll"].callback = toggleMap["AntiRagdoll"].toggle.Callback
 
 -- 🧍‍♂️ Visual Tab
 local VisualTab = MainSection:Tab({
@@ -535,25 +734,32 @@ end
 
 local function sendWebhook(name, btype, price, jobId, placeId, mutation, players)
     local webhookUrl = btype == "god" and brainrotGodWebhook or brainrotSecretWebhook
-    if not webhookUrl or webhookUrl == "" then return end
+    if not webhookUrl or webhookUrl == "" then
+        return
+    end
     local now = os.date("!%Y-%m-%d %H:%M:%S")
-    local mobileScript = string.format('game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s")', placeId, jobId)
-    local joinLink = string.format("https://fern.wtf/joiner?placeId=%d&gameInstanceId=%s", placeId, jobId)
+    local mobileScript = string.format('game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s")', placeId, jobId or "")
+    local joinLink = string.format("https://fern.wtf/joiner?placeId=%d&gameInstanceId=%s", placeId, jobId or "")
     local embed = {
-        title = "🧠 New Pet Found - " .. now,
+        title = "🧠 New Pet Found - " .. (now or "Unknown Time"),
         color = btype == "god" and 65280 or 16711680,
         fields = {
-            { name = "Pets", value = name, inline = true },
-            { name = "Players", value = tostring(players), inline = true },
+            { name = "Pets", value = tostring(name or "Unknown"), inline = true },
+            { name = "Players", value = tostring(players or 0), inline = true },
             { name = "Script For mobile (click to copy):", value = "```lua\n" .. mobileScript .. "\n```" },
             { name = "Join Link:", value = joinLink },
-            { name = "Job ID", value = jobId }
+            { name = "Job ID", value = tostring(jobId or "Unknown") }
         }
     }
-    local payload = HttpService:JSONEncode({ embeds = { embed } })
+    local success, payload = pcall(function()
+        return HttpService:JSONEncode({ embeds = { embed } })
+    end)
+    if not success then
+        return
+    end
     local req = (syn and syn.request) or http_request or request
     if req then
-        pcall(function()
+        local success, err = pcall(function()
             req({
                 Url = webhookUrl,
                 Method = "POST",
@@ -561,11 +767,17 @@ local function sendWebhook(name, btype, price, jobId, placeId, mutation, players
                 Body = payload
             })
         end)
+    else
+        WindUI:Notify({
+            Title = "Webhook Error",
+            Content = "HTTP request function not available.",
+            Icon = "alert-triangle"
+        })
     end
 end
 
 local function createESP(model)
-    if not model:IsA("Model") or model:FindFirstChild("ESP") then return end
+    if not model or not model:IsA("Model") or model:FindFirstChild("ESP") then return end
     local head = model:FindFirstChildWhichIsA("BasePart")
     if not head then return end
     local name = model.Name
@@ -631,13 +843,13 @@ local brainrotConnection = workspace.ChildAdded:Connect(function(child)
     if brainrotESPEnabled then createESP(child) end
 end)
 
-toggleMap["Brainrot ESP"].toggle = VisualTab:Toggle({
+toggleMap["BrainrotESP"].toggle = VisualTab:Toggle({
     Title = "Brainrot ESP",
     Desc = "Show ESP for Brainrot God & Secret Only",
     Value = false,
     Callback = function(state)
         brainrotESPEnabled = state
-        toggleMap["Brainrot ESP"].value = state
+        toggleMap["BrainrotESP"].value = state
         WindUI:Notify({
             Title = "Brainrot ESP",
             Content = state and "Enabled" or "Disabled",
@@ -655,11 +867,11 @@ toggleMap["Brainrot ESP"].toggle = VisualTab:Toggle({
         end
     end
 })
-toggleMap["Brainrot ESP"].callback = toggleMap["Brainrot ESP"].toggle.Callback
+toggleMap["BrainrotESP"].callback = toggleMap["BrainrotESP"].toggle.Callback
 
 local ESPFolder = Instance.new("Folder")
 ESPFolder.Name = "PlayerESP"
-ESPFolder.Parent = game.CoreGui
+ESPFolder.Parent = CoreGui
 
 local function CreatePlayerESP(player)
     if player == LocalPlayer or ESPFolder:FindFirstChild(player.Name) then return end
@@ -732,13 +944,13 @@ end)
 
 RunService.Heartbeat:Connect(UpdatePlayerESP)
 
-toggleMap["Player ESP"].toggle = VisualTab:Toggle({
+toggleMap["PlayerESP"].toggle = VisualTab:Toggle({
     Title = "Player ESP",
     Desc = "Show ESP for Other Players.",
     Value = false,
     Callback = function(state)
         playerESPEnabled = state
-        toggleMap["Player ESP"].value = state
+        toggleMap["PlayerESP"].value = state
         WindUI:Notify({
             Title = "Player ESP",
             Content = state and "Actived" or "NonActived",
@@ -749,7 +961,7 @@ toggleMap["Player ESP"].toggle = VisualTab:Toggle({
         end
     end
 })
-toggleMap["Player ESP"].callback = toggleMap["Player ESP"].toggle.Callback
+toggleMap["PlayerESP"].callback = toggleMap["PlayerESP"].toggle.Callback
 
 local activeLockTimerESPParts = {}
 local lastTimerValue = {}
@@ -819,13 +1031,11 @@ connections.lockTimerESP = RunService.Heartbeat:Connect(function()
 
                         local id = plot:GetDebugId()
 
-                        -- simpan perubahan timer
                         if lastTimerValue[id] ~= rawText then
                             lastTimerValue[id] = rawText
                             lastTimerTick[id] = tick()
                         end
 
-                        -- stuck check: kalau tidak berubah >3 detik, dianggap Unlock
                         local stuck = lastTimerTick[id] and (tick() - lastTimerTick[id] > 3)
 
                         if rawText == "" 
@@ -846,13 +1056,13 @@ connections.lockTimerESP = RunService.Heartbeat:Connect(function()
     end
 end)
 
-toggleMap["ESP Lock Timer"].toggle = VisualTab:Toggle({
+toggleMap["ESPLockTimer"].toggle = VisualTab:Toggle({
     Title = "ESP Lock Timer",
     Desc = "Show ESP Lock - Lock Base Timer.",
     Value = false,
     Callback = function(state)
         lockTimerESPEnabled = state
-        toggleMap["ESP Lock Timer"].value = state
+        toggleMap["ESPLockTimer"].value = state
         WindUI:Notify({
             Title = "ESP Lock Timer",
             Content = state and "Enabled" or "Disabled",
@@ -860,22 +1070,13 @@ toggleMap["ESP Lock Timer"].toggle = VisualTab:Toggle({
         })
     end
 })
-toggleMap["ESP Lock Timer"].callback = toggleMap["ESP Lock Timer"].toggle.Callback
---------------------------------------------------------------------
--- Variabel
---------------------------------------------------------------------
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
-local player = Players.LocalPlayer
+toggleMap["ESPLockTimer"].callback = toggleMap["ESPLockTimer"].toggle.Callback
 
-local lockReminderEnabled = false
 local screenGui, label, alarm
 
---------------------------------------------------------------------
--- Fungsi buat GUI
---------------------------------------------------------------------
 local function createGUI()
+    if screenGui then screenGui:Destroy() end
+    if alarm then alarm:Destroy() end
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "BaseStatusGUI"
     screenGui.ResetOnSpawn = false
@@ -902,9 +1103,6 @@ local function createGUI()
     alarm.Parent = workspace
 end
 
---------------------------------------------------------------------
--- Fungsi hapus GUI
---------------------------------------------------------------------
 local function removeGUI()
     if screenGui then
         screenGui:Destroy()
@@ -912,14 +1110,12 @@ local function removeGUI()
     end
     if alarm then
         alarm:Stop()
+        alarm:Destroy()
         alarm = nil
     end
     label = nil
 end
 
---------------------------------------------------------------------
--- Fungsi cari plot & timer
---------------------------------------------------------------------
 local function findMyPlot()
     local plots = workspace:FindFirstChild("Plots")
     if not plots then return end
@@ -932,6 +1128,7 @@ local function findMyPlot()
 end
 
 local function getRemainingSeconds(plot)
+    if not plot then return end
     for _, obj in ipairs(plot:GetDescendants()) do
         if obj:IsA("TextLabel") and obj.Name == "RemainingTime" and obj.Visible then
             local seconds = tonumber(obj.Text:match("(%d+)"))
@@ -940,16 +1137,13 @@ local function getRemainingSeconds(plot)
     end
 end
 
---------------------------------------------------------------------
--- Toggle WindUI
---------------------------------------------------------------------
-toggleMap["Reminder Lock"].toggle = VisualTab:Toggle({
+toggleMap["ReminderLock"].toggle = VisualTab:Toggle({
     Title = "Reminder Lock",
     Desc = "Reminder Lock Your Base When 10Sec.",
     Value = false,
     Callback = function(state)
         lockReminderEnabled = state
-        toggleMap["Reminder Lock"].value = state
+        toggleMap["ReminderLock"].value = state
         WindUI:Notify({
             Title = "Reminder Lock",
             Content = state and "Enabled" or "Disabled",
@@ -963,10 +1157,8 @@ toggleMap["Reminder Lock"].toggle = VisualTab:Toggle({
         end
     end
 })
+toggleMap["ReminderLock"].callback = toggleMap["ReminderLock"].toggle.Callback
 
---------------------------------------------------------------------
--- Loop utama
---------------------------------------------------------------------
 task.spawn(function()
     while true do
         if lockReminderEnabled and label then
@@ -1011,77 +1203,22 @@ local OtherSection = Window:Section({
     Icon = "boxes"
 })
 
-local StealingTab = OtherSection:Tab({
-    Title = "Stealing",
-    Icon = "hand"
-})
-
--- Fungsi untuk memuat ulang skrip Tween To Base
-local function loadTweenToBaseScript()
-    local success, err = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/Walvytriplesix/sab/main/script-tween-to-base-premium"))()
-    end)
-    if not success then
-        tweenToBaseEnabled = false
-        toggleMap["Tween To Base"].value = false
-        toggleMap["Tween To Base"].toggle:Set(false)
-        WindUI:Notify({
-            Title = "Tween To Base Error",
-            Content = "Failed to load script: " .. tostring(err),
-            Icon = "alert-triangle"
-        })
-        return false
-    end
-    return true
-end
-
--- Fungsi untuk membersihkan GUI dan state Tween To Base
-local function cleanupTweenToBase()
-    if getgenv().TweenToBaseCleanup then
-        pcall(function()
-            getgenv().TweenToBaseCleanup()
-        end)
-    end
-    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    if playerGui then
-        local gui = playerGui:FindFirstChild("WalvyWalkGui")
-        if gui then
-            gui:Destroy()
-        end
-    end
-end
-
-toggleMap["Tween To Base"].toggle = StealingTab:Toggle({
-    Title = "Tween To Base",
-    Desc = "Enable GUI Menu Stealing",
-    Value = false,
-    Callback = function(state)
-        tweenToBaseEnabled = state
-        toggleMap["Tween To Base"].value = state
-        if state then
-            if loadTweenToBaseScript() then
-                WindUI:Notify({
-                    Title = "Tween To Base",
-                    Content = "Enabled",
-                    Icon = "rbxassetid://114691672281339"
-                })
-            end
-        else
-            cleanupTweenToBase()
-            WindUI:Notify({
-                Title = "Tween To Base",
-                Content = "Disabled",
-                Icon = "rbxassetid://114691672281339"
-            })
-        end
-    end
-})
-toggleMap["Tween To Base"].callback = toggleMap["Tween To Base"].toggle.Callback
-
 local ShopTab = OtherSection:Tab({
     Title = "Shop",
     Icon = "shopping-cart"
 })
+
+local function buyAndEquipItem(itemName)
+    pcall(function()
+        ReplicatedStorage.Packages.Net["RF/CoinsShopService/RequestBuy"]:InvokeServer(itemName)
+        task.wait(0.1)
+        local backpack = LocalPlayer:WaitForChild("Backpack")
+        local tool = LocalPlayer.Character:FindFirstChild(itemName) or backpack:FindFirstChild(itemName)
+        if tool and tool.Parent ~= LocalPlayer.Character then
+            tool.Parent = LocalPlayer.Character
+        end
+    end)
+end
 
 ShopTab:Button({
     Title = "Buy All Stealing Tools",
@@ -1123,9 +1260,6 @@ createBuyButton("Body Swap Potion", "Body Swap Potion")
 createBuyButton("Rainbowrarth Sword", "Rainbowrarth Sword")
 createBuyButton("Trap", "Trap")
 
-local TeleportService = game:GetService("TeleportService")
-local LocalPlayer = game.Players.LocalPlayer
-
 local HopeServerTab = OtherSection:Tab({
     Title = "Hope Server",
     Icon = "server"
@@ -1139,12 +1273,20 @@ HopeServerTab:Input({
     Placeholder = "Paste Job ID here",
     Text = "",
     Callback = function(text)
-        currentJobId = text
-        WindUI:Notify({
-            Title = "Job ID",
-            Content = "Job ID set to: " .. text,
-            Icon = "rbxassetid://114691672281339"
-        })
+        if text and type(text) == "string" and text ~= "" then
+            currentJobId = text
+            WindUI:Notify({
+                Title = "Job ID",
+                Content = "Job ID set to: " .. text,
+                Icon = "rbxassetid://114691672281339"
+            })
+        else
+            WindUI:Notify({
+                Title = "Job ID Error",
+                Content = "Please enter a valid Job ID.",
+                Icon = "alert-triangle"
+            })
+        end
     end
 })
 
@@ -1156,96 +1298,92 @@ HopeServerTab:Button({
             return WindUI:Notify({
                 Title = "Error",
                 Content = "Please enter a valid Job ID",
-                Icon = "rbxassetid://114691672281339"
+                Icon = "alert-triangle"
             })
         end
         local placeId = game.PlaceId
         local success, err = pcall(function()
-            -- langsung teleport tanpa cek owner/private
             TeleportService:TeleportToPlaceInstance(placeId, currentJobId, LocalPlayer)
         end)
         WindUI:Notify({
             Title = success and "Teleport" or "Teleport Error",
-            Content = success and ("Teleporting to Job ID: " .. currentJobId) or ("Failed: " .. tostring(err)),
+            Content = success and ("Teleporting to Job ID: " .. currentJobId) or ("Failed: " .. tostring(err or "Unknown error")),
             Icon = "rbxassetid://114691672281339"
         })
     end
 })
 
--- Tombol Rejoin Current Server
 HopeServerTab:Button({
     Title = "Rejoin Current Server",
     Desc = "Rejoins the current server",
     Callback = function()
         local success, err = pcall(function()
-            -- Cleanup connections
-            if connections then
-                for _, conn in pairs(connections) do
-                    if conn then
-                        if typeof(conn) == "thread" then
-                            task.cancel(conn)
-                        elseif typeof(conn) == "RBXScriptConnection" then
-                            conn:Disconnect()
-                        end
+            for _, conn in pairs(connections) do
+                if conn then
+                    if typeof(conn) == "thread" then
+                        task.cancel(conn)
+                    elseif typeof(conn) == "RBXScriptConnection" then
+                        conn:Disconnect()
                     end
                 end
-                connections = {}
             end
-            -- Hapus ESP
-            if ESPFolder and ESPFolder:IsA("Folder") then
-                ESPFolder:Destroy()
-            end
+            connections = {}
+            if ESPFolder then ESPFolder:Destroy() end
             for _, obj in pairs(workspace:GetChildren()) do
                 local esp = obj:FindFirstChild("ESP")
                 if esp then esp:Destroy() end
             end
-            -- Rejoin server
+            if not game.JobId or game.JobId == "" then
+                error("No valid Job ID available for rejoin")
+            end
             TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
         end)
         WindUI:Notify({
             Title = success and "Rejoin" or "Rejoin Error",
-            Content = success and "Rejoining current server" or ("Failed to rejoin: " .. tostring(err)),
+            Content = success and "Rejoining current server" or ("Failed to rejoin: " .. tostring(err or "Unknown error")),
             Icon = "rbxassetid://114691672281339"
         })
     end
 })
 
--- Tombol Copy Current Job ID
 HopeServerTab:Button({
     Title = "Copy Current Job ID",
     Desc = "Copies the current Job ID to clipboard",
     Callback = function()
-        local success, err = pcall(function()
-            if not setclipboard then
-                error("setclipboard function not available")
-            end
-            setclipboard(game.JobId)
-        end)
-        WindUI:Notify({
-            Title = success and "Copied" or "Copy Error",
-            Content = success and "Current Job ID copied to clipboard" or ("Failed to copy Job ID: " .. tostring(err)),
-            Icon = "rbxassetid://114691672281339"
-        })
+        local jobId = game.JobId
+        if not jobId or jobId == "" then
+            WindUI:Notify({
+                Title = "Copy Error",
+                Content = "No valid Job ID available to copy",
+                Icon = "alert-triangle"
+            })
+            return
+        end
+        if safeSetClipboard(jobId) then
+            WindUI:Notify({
+                Title = "Copied",
+                Content = "Current Job ID copied to clipboard",
+                Icon = "rbxassetid://114691672281339"
+            })
+        end
     end
 })
 
--- Tombol Hope Server (hanya public server)
 HopeServerTab:Button({
     Title = "Hope Server",
     Desc = "Only Work On Public Server",
     Callback = function()
         HopeserverEnabled = not HopeserverEnabled
         if HopeserverEnabled then
-            loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
+            local success, err = pcall(function()
+                loadstring(game:HttpGet("https://pastebin.com/raw/rV0w7pks"))()
+            end)
             WindUI:Notify({
                 Title = "Hope Server",
-                Content = "Enabled",
+                Content = success and "Enabled" or ("Failed: " .. tostring(err or "Unknown error")),
                 Icon = "rbxassetid://114691672281339"
             })
         else
-            if getgenv().TweenToBaseCleanup then
-                getgenv().TweenToBaseCleanup()
-            end
             WindUI:Notify({
                 Title = "Hope Server",
                 Content = "Disabled",
@@ -1277,7 +1415,7 @@ local function saveConfig()
             if not success then
                 WindUI:Notify({
                     Title = "Config Error",
-                    Content = "Failed to create config folder: " .. tostring(err),
+                    Content = "Failed to create config folder: " .. tostring(err or "Unknown error"),
                     Icon = "alert-triangle"
                 })
                 return
@@ -1289,7 +1427,7 @@ local function saveConfig()
         end)
         WindUI:Notify({
             Title = "Config",
-            Content = success and ("Config berhasil disimpan: " .. configName) or ("Failed to save config: " .. tostring(err)),
+            Content = success and ("Config berhasil disimpan: " .. configName) or ("Failed to save config: " .. tostring(err or "Unknown error")),
             Icon = success and "check" or "alert-triangle"
         })
     else
@@ -1302,8 +1440,16 @@ local function saveConfig()
 end
 
 local function loadConfig()
+    if not isfile or not readfile then
+        WindUI:Notify({
+            Title = "Config Error",
+            Content = "File system functions not available",
+            Icon = "alert-triangle"
+        })
+        return
+    end
     local path = CONFIG_FOLDER .. "/" .. configName .. ".json"
-    if isfile and readfile and isfile(path) then
+    if isfile(path) then
         local success, decoded = pcall(function()
             return HttpService:JSONDecode(readfile(path))
         end)
@@ -1321,7 +1467,7 @@ local function loadConfig()
         else
             WindUI:Notify({
                 Title = "Config Error",
-                Content = "Failed to load config: " .. tostring(decoded),
+                Content = "Failed to load config: " .. tostring(decoded or "Unknown error"),
                 Icon = "alert-triangle"
             })
         end
@@ -1339,7 +1485,7 @@ ConfigTab:Input({
     Placeholder = "Enter config name",
     Default = configName,
     Callback = function(value)
-        if value and value ~= "" then
+        if value and type(value) == "string" and value ~= "" then
             configName = value
             WindUI:Notify({
                 Title = "Config",
@@ -1364,7 +1510,7 @@ ConfigTab:Button({
 
 -- ===== AUTO LOAD CONFIG =====
 task.spawn(function()
-    task.wait(0.1) -- pastikan semua toggle siap
+    task.wait(0.1)
     loadConfig()
 end)
 
@@ -1380,10 +1526,15 @@ game:BindToClose(function()
             end
         end
     end
+    if brainrotConnection and brainrotConnection.Connected then
+        brainrotConnection:Disconnect()
+    end
+    getgenv().InfinityJumpCleanup()
     if ESPFolder then ESPFolder:Destroy() end
+    if screenGui then screenGui:Destroy() end
+    if gui then gui:Destroy() end
     for _, obj in pairs(workspace:GetChildren()) do
         local esp = obj:FindFirstChild("ESP")
         if esp then esp:Destroy() end
     end
-    cleanupTweenToBase()
 end)
