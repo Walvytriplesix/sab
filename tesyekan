@@ -1424,28 +1424,49 @@ HopeServerTab:Button({
     Title = "Hope Server",
     Desc = "Only Work On Public Server",
     Callback = function()
-        HopeserverEnabled = not HopeserverEnabled
-        if HopeserverEnabled then
-            local success, err = pcall(function()
-                -- Temporarily disabled to isolate error
-                -- local externalScript = game:HttpGet("https://pastebin.com/raw/rV0w7pks")
-                -- local func = loadstring(externalScript)
-                -- if func then
-                --     func()
-                -- else
-                --     error("Failed to compile external script")
-                -- end
-                warn("Hope Server script loading is disabled for debugging. Please verify the external script.")
-            end)
+        local HttpService = game:GetService("HttpService")
+        local TeleportService = game:GetService("TeleportService")
+        local Players = game:GetService("Players")
+
+        local PlaceID = game.PlaceId
+        local JobID = game.JobId
+
+        local function GetServers(cursor)
+            local url = "https://games.roblox.com/v1/games/" .. PlaceID .. "/servers/Public?sortOrder=Asc&limit=100"
+            if cursor then
+                url = url .. "&cursor=" .. cursor
+            end
+            local response = game:HttpGet(url)
+            return HttpService:JSONDecode(response)
+        end
+
+        local found = false
+        local cursor
+
+        local success, err = pcall(function()
+            repeat
+                local servers = GetServers(cursor)
+                for _, server in pairs(servers.data) do
+                    if server.playing < server.maxPlayers and server.id ~= JobID then
+                        TeleportService:TeleportToPlaceInstance(PlaceID, server.id, Players.LocalPlayer)
+                        found = true
+                        break
+                    end
+                end
+                cursor = servers.nextPageCursor
+            until found or not cursor
+        end)
+
+        if success and found then
             WindUI:Notify({
                 Title = "Hope Server",
-                Content = success and "Enabled (debug mode)" or ("Failed: " .. tostring(err or "Unknown error")),
+                Content = "Teleporting to a new server...",
                 Icon = "rbxassetid://114691672281339"
             })
         else
             WindUI:Notify({
                 Title = "Hope Server",
-                Content = "Disabled",
+                Content = "⚠️ No available server found.",
                 Icon = "rbxassetid://114691672281339"
             })
         end
