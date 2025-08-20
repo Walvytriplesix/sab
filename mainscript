@@ -1,5 +1,5 @@
 -- Wait for initialization
-task.wait(5)
+task.wait(6)
 
 -- Services
 local HttpService = game:GetService("HttpService")
