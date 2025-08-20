@@ -51,8 +51,13 @@ local currentSpeed = 150
 local DEFAULT_SPEED = 16
 local itemID = "Grapple Hook"
 local badTools = {
-    "Medusa's Head", "Invisibility Cloak", "Rainbowrath Sword",
-    "All Seeing Sentry", "Speed Coil", "Quantum Cloner"
+    "Medusa's Head",
+    "Invisibility Cloak",
+    "Rainbowrath Sword",
+    "All Seeing Sentry",
+    "Speed Coil",
+    "Quantum Cloner",
+    "Tung Bat"
 }
 local infinityJumpEnabled = false
 local godOn = false
