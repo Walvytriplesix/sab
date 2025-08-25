@@ -1,0 +1,106 @@
+local Players = game:GetService("Players")
+local PathfindingService = game:GetService("PathfindingService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+-- Fungsi cari DeliveryHitbox
+local function FindDelivery()
+    local plots = workspace:WaitForChild("Plots", 5) -- Added timeout
+    if not plots then
+        warn("Plots folder not found in workspace")
+        return nil
+    end
+    
+    for _, plot in pairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        if sign then
+            local yourBase = sign:FindFirstChild("YourBase")
+            if yourBase and yourBase.Enabled then
+                local hitbox = plot:FindFirstChild("DeliveryHitbox")
+                if hitbox then 
+                    return hitbox 
+                end
+            end
+        end
+    end
+    warn("No valid DeliveryHitbox found")
+    return nil
+end
+
+-- Fungsi jalan ke target (pakai Pathfinding)
+local function WalkTo(target)
+    if not target or not target:IsA("BasePart") then 
+        warn("Invalid target for WalkTo")
+        return 
+    end
+
+    -- Buat path
+    local path = PathfindingService:CreatePath({
+        AgentRadius = 2,
+        AgentHeight = 5,
+        AgentCanJump = true,
+        AgentJumpHeight = 8,
+        AgentMaxSlope = 45
+    })
+
+    local success, errorMessage = pcall(function()
+        path:ComputeAsync(hrp.Position, target.Position)
+    end)
+
+    if not success then
+        warn("Path computation failed: " .. tostring(errorMessage))
+        return
+    end
+
+    if path.Status == Enum.PathStatus.Success then
+        local waypoints = path:GetWaypoints()
+        for _, waypoint in ipairs(waypoints) do
+            if not humanoid or not hrp or not humanoid.Parent then
+                warn("Character components missing during pathfinding")
+                return
+            end
+            
+            humanoid:MoveTo(waypoint.Position)
+            local moveSuccess, moveError = pcall(function()
+                humanoid.MoveToFinished:Wait(2) -- Added timeout
+            end)
+            
+            if not moveSuccess then
+                warn("MoveTo failed: " .. tostring(moveError))
+                return
+            end
+        end
+    else
+        warn("Path not found! Status: " .. tostring(path.Status))
+    end
+end
+
+-- Handle character respawn
+local function onCharacterAdded(newCharacter)
+    character = newCharacter
+    humanoid = character:WaitForChild("Humanoid")
+    hrp = character:WaitForChild("HumanoidRootPart")
+end
+
+-- Connect character added event
+player.CharacterAdded:Connect(onCharacterAdded)
+
+-- Main execution
+local function main()
+    local delivery = FindDelivery()
+    if delivery then
+        WalkTo(delivery) -- Pass the part, not the position
+    else
+        warn("Failed to start pathfinding: No delivery hitbox found")
+    end
+end
+
+-- Run main function with error handling
+local success, errorMessage = pcall(main)
+if not success then
+    warn("Main execution failed: " .. tostring(errorMessage))
+end
